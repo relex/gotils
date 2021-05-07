@@ -1,0 +1,11 @@
+tests:
+  - name: Relex
+    test: my_test
+    foo: WTF!
+  - name: Foo
+    test: my_test_1
+    foo: Bar
+
+enterprise:
+  name: Foo
+  arguments: Relex

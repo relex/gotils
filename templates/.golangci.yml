@@ -1,0 +1,29 @@
+run:
+  skip-files:
+    - ".*\\.tpl\\.go$"
+
+linters-settings:
+  funlen:
+    lines: 150
+    statements: 105
+
+linters:
+  enable:
+    - bodyclose
+    # - dupl # USELESS until templates can be replaced by generics 
+    - errorlint
+    - exhaustive
+    # - exhaustivestruct # OUTDATED
+    - exportloopref
+    - funlen
+    - gci
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    # - gosec # CANNOT use gosec until options are supported: https://github.com/golangci/golangci-lint/issues/177
+    - interfacer
+    - prealloc
+    # - scopelint # OUTDATED, USE THE REAL TOOL
+    - unconvert
+    - unparam

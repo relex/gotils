@@ -1,0 +1,25 @@
+[
+    {
+        "targets": [
+            "foo.domain.com",
+            "bar.domain.com",
+            "customer-1.domain.de"
+        ],
+        "labels": {
+            "server": "foo.serverdomain.fi",
+            "in_support": "true",
+            "cluster": "non-clustered"
+        }
+    },
+    {
+        "targets": [
+            "baz.domain.com"
+        ],
+        "labels": {
+            "server": "baz.serverdomain.fi",
+            "in_support": "false",
+            "cluster": "non-clustered"
+        }
+    }
+  ]
+  
