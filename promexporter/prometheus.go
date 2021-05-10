@@ -17,8 +17,10 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"reflect"
 	"time"
 
+	"github.com/iancoleman/strcase"
 	"github.com/mileusna/crontab"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -34,9 +36,9 @@ var Gatherer *prometheus.Gatherer = &prometheus.DefaultGatherer
 type Timer = chan bool
 
 // Serve starts an http server
-func Serve(getMetricsFn func(), port uint16, ticker *Timer) error {
+func Serve(getMetricsFn func(), port uint16, timer *Timer) error {
 	addr := fmt.Sprintf(":%d", port)
-	http.Handle("/metrics", GetHandler(getMetricsFn, ticker))
+	http.Handle("/metrics", GetHandler(getMetricsFn, timer))
 	return http.ListenAndServe(addr, nil)
 }
 
@@ -104,4 +106,40 @@ type customGatherer struct {
 func (c customGatherer) Gather() ([]*dto.MetricFamily, error) {
 	c.getMetricsFn()
 	return c.oldGatherer.Gather()
+}
+
+// GetLabelNames creates a list of label names out of struct fields to use in Prometheus metric
+// The label can be specified by a `label` tag, e.g.:
+// ```go
+// type ProcessLabels struct {
+// 	ProcessName   string `label:"process_name"`
+// 	ProcessStatus string `label:"process_status"`
+// }
+// ```
+// If no `label` tag is specified, a field name converted to snake_case will be used instead
+func GetLabelNames(labelStruct interface{}) []string {
+	t := reflect.TypeOf(labelStruct)
+	labels := make([]string, t.NumField())
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		tag := f.Tag.Get("label")
+		if tag == "" {
+			tag = strcase.ToSnake(f.Name)
+		}
+		labels[i] = tag
+	}
+	return labels
+}
+
+// GetLabelValues creates a list of label values out of struct field values to use in Prometheus metric
+// See GetLabelNames function for the context
+// If a field type is not string it will be converted to string automatically, see https://golang.org/pkg/reflect/#Value.String
+func GetLabelValues(labelStruct interface{}) []string {
+	v := reflect.ValueOf(labelStruct)
+	labels := make([]string, v.NumField())
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i)
+		labels[i] = f.String()
+	}
+	return labels
 }
