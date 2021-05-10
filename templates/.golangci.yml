@@ -10,7 +10,7 @@ linters-settings:
 linters:
   enable:
     - bodyclose
-    # - dupl # USELESS until templates can be replaced by generics 
+    # - dupl # USELESS until code templating can be replaced by generics (Go v2)
     - errorlint
     - exhaustive
     # - exhaustivestruct # OUTDATED
@@ -21,9 +21,9 @@ linters:
     - gocritic
     - gocyclo
     - goprintffuncname
-    # - gosec # CANNOT use gosec until options are supported: https://github.com/golangci/golangci-lint/issues/177
+    # - gosec # CANNOT use until gosec options can be configured here: https://github.com/golangci/golangci-lint/issues/177
     - interfacer
     - prealloc
-    # - scopelint # OUTDATED, USE THE REAL TOOL
+    # - scopelint # OUTDATED
     - unconvert
     - unparam

@@ -3,6 +3,7 @@
 gotils is a parent repository of small libraries we use in Monitoring \& Logging
 
 - [cacher](cacher/README.md): HTTP request with cache for fallback
+- [channels](channels/README.md): helper functions for go channels
 - [config](config/README.md): command-line flags and config parsing; wraps spf13's [cobra](github.com/spf13/cobra) and [viper](github.com/spf13/viper)
 - [logger](logger/README.md): logging library; wraps [logrus](github.com/sirupsen/logrus)
 - [promexporter](promexporter/README.md): common exporter pattern and custom metric types
@@ -100,13 +101,13 @@ LOG_LEVEL=debug TEST_TIMEOUT=60s make test
 
 `make lint`: Check code by tools below:
 
-- exhaustivestruct: check structs are initialized with all fields
+- exhaustivestruct: check all struct fields are explicitly assigned in construction; set env `LINT_EXHAUSTIVESTRUCT=Y` to enable
 - go vet
 - golint
-- shadow: check shadowed variables
 - scopelint: check mis-used pointers to for-loop variables
-- staticcheck
-- golangci-lint
+- shadow: check shadowed variables
+- staticcheck: depends on `PROJECT_DIR/staticcheck.conf`, see [the sample config](templates/staticcheck.conf) for explanations
+- golangci-lint: depends on `PROJECT_DIR//.golangci.yml`, see [the sample config](templates/.golangci.yml) for explanations
 
 ###### Ignore lint rules in code
 

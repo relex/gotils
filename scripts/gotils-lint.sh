@@ -15,6 +15,9 @@
 
 set -o pipefail
 
+# Environment variables:
+#   LINT_EXHAUSTIVESTRUCT: y/1/t to make sure all appropriate fields are assigned in construction
+
 GOPATH=$(go env GOPATH) || exit 1
 test -d BUILD || { echo "missing BUILD dir"; exit 1; }
 
@@ -52,24 +55,32 @@ trap make_report EXIT
 
 PWD=$(pwd)
 
-echo "EXHAUSTIVESTRUCT:"
-exhaustivestruct ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g" | tee >(collect_issues exhaustivestruct minor)
-echo "------------------------------------------------------------"
+if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* ]]; then
+    echo "EXHAUSTIVESTRUCT:"
+    exhaustivestruct ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g" | tee >(collect_issues exhaustivestruct minor)
+    echo "------------------------------------------------------------"
+fi
+
 echo "GO VET:"
 go vet ./... 2>&1 | tee >(collect_issues go-vet info)
 echo "------------------------------------------------------------"
+
 echo "GO LINT:"
 golint ./... 2>&1 | tee >(collect_issues go-lint info)
 echo "------------------------------------------------------------"
-echo "SHADOW:"
-shadow ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g" | tee >(collect_issues shadow major)
-echo "------------------------------------------------------------"
+
 echo "SCOPELINT:"
 scopelint ./... 2>&1 | tee >(collect_issues scopelint major)
 echo "------------------------------------------------------------"
+
+echo "SHADOW:"
+shadow ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g" | tee >(collect_issues shadow major)
+echo "------------------------------------------------------------"
+
 echo "STATICCHECK:"
 staticcheck ./... 2>&1 | tee >(collect_issues staticcheck info)
 echo "------------------------------------------------------------"
+
 echo "GOLANGCI-LINT:"
 golangci-lint run 2>&1 | tee >(collect_issues golangci-lint info)
 

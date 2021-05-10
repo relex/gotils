@@ -15,10 +15,10 @@
 
 set -o pipefail
 
-# Environments:
-#   LOG_LEVEL: default to "warn" if unspecified
-#   LOG_COLOR: default to "Y" if unspecified
-#   TEST_TIMEOUT: default to "10s" if unspecified
+# Environment variables:
+#   LOG_LEVEL: output level for logger; "warn" if unspecified
+#   LOG_COLOR: color mode for logger; "Y" if unspecified
+#   TEST_TIMEOUT: timeout for each of tests; "10s" if unspecified
 
 GOPATH=$(go env GOPATH) || exit 1
 test -d BUILD || { echo "missing BUILD dir"; exit 1; }
