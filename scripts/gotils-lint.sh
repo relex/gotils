@@ -81,8 +81,13 @@ echo "STATICCHECK:"
 staticcheck ./... 2>&1 | tee >(collect_issues staticcheck info)
 echo "------------------------------------------------------------"
 
-echo "GOLANGCI-LINT:"
-golangci-lint run 2>&1 | tee >(collect_issues golangci-lint info)
+if [[ -f ".golangci.yml" ]]; then
+    echo "GOLANGCI-LINT:"
+    golangci-lint run 2>&1 | tee >(collect_issues golangci-lint info)
+else
+    echo "GOLANGCI-LINT: (default config)"
+    golangci-lint run -c ${GOPATH}/opt/gotils/templates/.golangci.yml 2>&1 | tee >(collect_issues golangci-lint info)
+fi
 
 # return error if there is any issue
 test ! -s BUILD/lint-codequality.dump
