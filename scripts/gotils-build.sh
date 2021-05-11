@@ -22,6 +22,7 @@
 set -o pipefail
 
 GOPATH=$(go env GOPATH) || exit 1
+CGO_ENABLED=${CGO_ENABLED:-0}
 test -d BUILD || { echo "missing BUILD dir"; exit 1; }
 
 # Generate and check go inline reports by special "xx:inline" comment
@@ -46,7 +47,7 @@ function finish {
 trap finish EXIT
 
 # DO NOT run this together in normal compiling, or subpackeges would be skipped from report
-GO111MODULE=on go build -gcflags "./...=-m -l=4" -ldflags "$GO_LDFLAGS -extldflags -static" -o BUILD "$@" 2>&1 | tee >(collect_inline_hints) | hide_inline_hints
+GO111MODULE=on CGO_ENABLED=$CGO_ENABLED go build -gcflags "./...=-m -l=4" -ldflags "$GO_LDFLAGS -extldflags -static" -o BUILD "$@" 2>&1 | tee >(collect_inline_hints) | hide_inline_hints
 GOBUILD_EXIT=$?
 if [[ "$GOBUILD_EXIT" != "0" ]]
 then
