@@ -18,6 +18,12 @@ Copyright belongs to RELEX Oy and to authors mentioned in individual files.
 
 ## Use shared build tools
 
+#### Requirements
+- bash
+- go
+- jq (will be installed automatically if missing)
+- make
+
 #### Install build tools
 
 Only need to be done once per development environment, under `gotils` dir:
