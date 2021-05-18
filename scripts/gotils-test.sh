@@ -21,9 +21,10 @@ set -o pipefail
 #   TEST_TIMEOUT: timeout for each of tests; "10s" if unspecified
 
 GOPATH=$(go env GOPATH) || exit 1
+CGO_ENABLED=${CGO_ENABLED:-0}
 test -d BUILD || { echo "missing BUILD dir"; exit 1; }
 
-LOG_LEVEL=${LOG_LEVEL:-warn} LOG_COLOR=${LOG_COLOR:-Y} go test -timeout ${TEST_TIMEOUT:-10s} -coverprofile=BUILD/test-coverage.out -v ./... 2>&1 | tee >(go-junit-report > BUILD/test-report.xml)
+CGO_ENABLED=$CGO_ENABLED LOG_LEVEL=${LOG_LEVEL:-warn} LOG_COLOR=${LOG_COLOR:-Y} go test -timeout ${TEST_TIMEOUT:-10s} -coverprofile=BUILD/test-coverage.out -v ./... 2>&1 | tee >(go-junit-report > BUILD/test-report.xml)
 TEST_RESULT=$?
 
 go tool cover -html=BUILD/test-coverage.out -o BUILD/test-coverage.html
