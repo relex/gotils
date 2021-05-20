@@ -49,10 +49,3 @@ bash -c "golangci-lint version" || ( \
     && install $GOLANGCI_PKGNAME/golangci-lint $GOPATH/bin/golangci-lint )
 ls -l $GOPATH/bin/golangci-lint
 popd >/dev/null
-
-# Install jq
-JQ_VER=1.6
-bash -c "echo '' | jq" || ( \
-    wget -q https://github.com/stedolan/jq/releases/download/jq-$JQ_VER/jq-linux64 -O $GOPATH/bin/jq \
-    && chmod 755 $GOPATH/bin/jq )
-jq --version

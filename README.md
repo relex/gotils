@@ -20,8 +20,8 @@ Copyright belongs to RELEX Oy and to authors mentioned in individual files.
 
 #### Requirements
 - bash
-- go
-- jq (will be installed automatically if missing)
+- [go](https://golang.org/dl/)
+- [jq](https://github.com/stedolan/jq/releases)
 - make
 
 #### Install build tools
