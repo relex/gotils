@@ -14,6 +14,7 @@
 # limitations under the License.
 
 # Environments:
+#   CGO_ENABLED: enable CGO or not; default 0
 #   GO_LDFLAGS: to be passed in -ldflags
 #
 # Command-line arguments:
@@ -46,8 +47,15 @@ function finish {
 }
 trap finish EXIT
 
-# DO NOT run this together in normal compiling, or subpackeges would be skipped from report
-GO111MODULE=on CGO_ENABLED=$CGO_ENABLED go build -gcflags "./...=-m -l=4" -ldflags "$GO_LDFLAGS -extldflags -static" -o BUILD "$@" 2>&1 | tee >(collect_inline_hints) | hide_inline_hints
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+if [[ $OS == "darwin" ]]
+then
+    GO_LDFLAGS_FULL="$GO_LDFLAGS" # "-static" is not supported on OS/X when linker is used
+else
+    GO_LDFLAGS_FULL="$GO_LDFLAGS -extldflags -static"
+fi
+
+GO111MODULE=on CGO_ENABLED=$CGO_ENABLED go build -gcflags "./...=-m -l=4" -ldflags "$GO_LDFLAGS_FULL" -o BUILD "$@" 2>&1 | tee >(collect_inline_hints) | hide_inline_hints
 GOBUILD_EXIT=$?
 if [[ "$GOBUILD_EXIT" != "0" ]]
 then
