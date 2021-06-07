@@ -21,6 +21,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/relex/gotils/promexporter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,6 +41,38 @@ func TestCacherGet(t *testing.T) {
 	assert.Contains(t, body, "bar.domain.com")
 	assert.Contains(t, body, "\"cluster\": \"non-clustered\"")
 	assert.Contains(t, body, "\"in_support\": \"false\"")
+	StopHTTPServer()
+}
+
+func TestCacherGetMetrics(t *testing.T) {
+	StartHTTPServer("../test_data//cacher-response-cache.json")
+
+	assert.Equal(t, `http_outgoing_requests_errors_total 0`+"\n",
+		promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
+
+	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
+	body, err := GetFromURLOrDefaultCache(req, cacheDir)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, body)
+	assert.Equal(t, `http_outgoing_requests_errors_total 0`+"\n"+
+		`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 1`+"\n",
+		promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
+	assert.Equal(t, "cacher_cache_requests_total 0\n", promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
+
+	// test increase
+	{
+		req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
+		body, err := GetFromURLOrDefaultCache(req, cacheDir)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, body)
+		assert.Equal(t, `http_outgoing_requests_errors_total 0`+"\n"+
+			`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 2`+"\n",
+			promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
+		assert.Equal(t, "cacher_cache_requests_total 0\n", promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
+	}
+
 	StopHTTPServer()
 }
 

@@ -18,12 +18,40 @@ import (
 	"hash/fnv"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/travelaudience/go-promhttp"
 
 	"github.com/relex/gotils/logger"
 )
+
+var (
+	totalCacheRequests = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cacher_cache_requests_total",
+			Help: "The total number of requests which were routed to the cache.",
+		},
+		[]string{"result", "path"})
+
+	// requestDurationHistogram shows the duration of requests
+	requestDurationHistogram = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "cacher_request_duration_histogram",
+			Help: "Histogram of request duration from cacher",
+		},
+		[]string{"statusCode", "path"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(requestDurationHistogram)
+}
 
 // getFileNameFromURL computes FNV-1a hash of the URL as filename to avoid name collisions
 func getFileNameFromURL(url string) string {
@@ -47,50 +75,72 @@ func GetFromURLOrDefaultCache(req *http.Request, cacheDir string) (string, error
 	return result, err
 }
 
-// GetFromURLOrDefaultCacheWithCallback downloads file into cacheDir and passes the content to the onData callback
+// GetFromURLOrDefaultCacheWithCallback is a function maintained for compatibility.
+// The required httpClient is created on behalf of the caller.
+// This means some of metrics registered may be less meaningful.
+func GetFromURLOrDefaultCacheWithCallback(req *http.Request, cacheDir string, onData func([]byte) error) error {
+	httpClient := &promhttp.Client{
+		Client:     http.DefaultClient,
+		Registerer: prometheus.DefaultRegisterer,
+	}
+
+	return GetFromURLOrDefaultCacheWithCallbackAndClient(req, cacheDir, onData, httpClient)
+}
+
+// GetFromURLOrDefaultCacheWithCallbackAndClient downloads file into cacheDir and passes the content to the onData callback
 //
 // If the URL is not available, attempt to read the previous response from cache
 //
 // The onData function should process the data (e.g. parsing JSON) and return error on failure. It may be called a
 // second time to process cache if the data from remote URL cannot be processed.
 //
+// The httpClient is a wrapper for the standard net/http client which registers some basic metrics.
+// We do not register errors here because they would not be meaningful.
+//
 // The function only returns remote error if both downloading from the URL and reading from existing cache fail,
 // cache-related error is only logged, not reported.
-func GetFromURLOrDefaultCacheWithCallback(req *http.Request, cacheDir string, onData func([]byte) error) error {
+func GetFromURLOrDefaultCacheWithCallbackAndClient(req *http.Request, cacheDir string, onData func([]byte) error, httpClient *promhttp.Client) error {
 
 	clogger := logger.WithFields(logger.Fields{
 		"component": "Cacher",
 		"url":       req.URL.String(),
 	})
+	cacherClient, _ := httpClient.ForRecipient("cacher")
 
 	filename := getFileNameFromURL(req.URL.String())
 	filepath := path.Join(cacheDir, filename)
 
-	httpClient := &http.Client{}
-	resp, reqErr := httpClient.Do(req)
+	requestStartTime := time.Now()
+	resp, reqErr := cacherClient.Do(req)
+	requestDuration := time.Since(requestStartTime)
 
 	if reqErr != nil {
-		return getCache(clogger, filepath, onData, fmt.Errorf("failed to open URL: %w", reqErr))
+		requestDurationHistogram.WithLabelValues("-1", req.URL.String()).Observe(requestDuration.Seconds())
+		return getCache(req.URL, clogger, filepath, onData, fmt.Errorf("failed to open URL: %w", reqErr))
 	}
 
 	// Resp could be nil in some cases
 	// Unauthorized 401 or Forbidden 403 don't return err, this is written in request
-	switch {
-	case resp == nil:
-		return getCache(clogger, filepath, onData, fmt.Errorf("failed to open URL: no response"))
-	case resp.StatusCode >= 300:
-		return getCache(clogger, filepath, onData, fmt.Errorf("failed to open URL: %s", resp.Status))
+
+	if resp == nil {
+		requestDurationHistogram.WithLabelValues("0", req.URL.String()).Observe(requestDuration.Seconds())
+		return getCache(req.URL, clogger, filepath, onData, fmt.Errorf("failed to open URL: no response"))
+	}
+	requestDurationHistogram.WithLabelValues(strconv.Itoa(resp.StatusCode), req.URL.String()).Observe(requestDuration.Seconds())
+
+	if resp.StatusCode >= 300 {
+		return getCache(req.URL, clogger, filepath, onData, fmt.Errorf("failed to open URL: %s", resp.Status))
 	}
 	defer resp.Body.Close()
 
 	// Read from HTTP request
 	body, respErr := ioutil.ReadAll(resp.Body)
 	if respErr != nil {
-		return getCache(clogger, filepath, onData, fmt.Errorf("failed to read request body from URL: %w", respErr))
+		return getCache(req.URL, clogger, filepath, onData, fmt.Errorf("failed to read request body from URL: %w", respErr))
 	}
 
 	if dataErr := onData(body); dataErr != nil {
-		return getCache(clogger, filepath, onData, fmt.Errorf("failed to process request body from URL: %w", dataErr))
+		return getCache(req.URL, clogger, filepath, onData, fmt.Errorf("failed to process request body from URL: %w", dataErr))
 	}
 
 	// Create cache Folder
@@ -106,7 +156,22 @@ func GetFromURLOrDefaultCacheWithCallback(req *http.Request, cacheDir string, on
 	return nil
 }
 
-func getCache(clogger logger.Logger, filepath string, onData func([]byte) error, remoteErr error) error {
+func getCache(url *url.URL, clogger logger.Logger, filepath string, onData func([]byte) error, remoteErr error) error {
+	// These vars can't be const, because you can't take references to constant values ¯\_(ツ)_/¯
+	successStatus := "hit"
+	failureStatus := "miss"
+	requestStatus := &successStatus
+
+	err := doGetCache(clogger, filepath, onData, remoteErr)
+
+	if err != nil {
+		requestStatus = &failureStatus
+	}
+	totalCacheRequests.WithLabelValues(*requestStatus, url.String()).Inc()
+	return err
+}
+
+func doGetCache(clogger logger.Logger, filepath string, onData func([]byte) error, remoteErr error) error {
 	// Read from file if request fails
 	data, fileErr := ioutil.ReadFile(filepath)
 	if fileErr != nil {

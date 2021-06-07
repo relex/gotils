@@ -1,6 +1,6 @@
 # Cacher
 
-Common cacher library for Internal affairs golang projects
+Common cacher library for some golang projects
 
 
 # Usage example
