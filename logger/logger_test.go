@@ -204,6 +204,19 @@ func TestForwardUnbuffered(t *testing.T) {
 	assert.True(t, strings.Contains(logs[3], "{\"key1\":\"val1\",\"key2\":\"val2\",\"key3\":\"val3\",\"level\":\"warning\",\"message\":\"OK\""))
 }
 
+func TestFormat(t *testing.T) {
+	assert.Equal(t, `[Storage] name="Foo Bar" status=123 hello world: 10`, WithFields(Fields{
+		priv.LabelComponent: "Storage",
+		"name":              "Foo Bar",
+		"status":            123,
+	}).Sprintf("hello world: %d", 10))
+
+	assert.Equal(t, `name="Foo Bar" status=123 hey456there`, WithFields(Fields{
+		"name":   "Foo Bar",
+		"status": 123,
+	}).Sprint("hey", 456, "there"))
+}
+
 func startUpstreamListener(endpoint string, logCollector chan string, maxLogs int, doneChannel chan bool) {
 	lsnr, err := net.Listen("tcp", endpoint)
 	if err != nil {
@@ -222,7 +235,7 @@ func startUpstreamListener(endpoint string, logCollector chan string, maxLogs in
 			if err != nil {
 				panic(err)
 			}
-			logCollector <- string(message)
+			logCollector <- message
 			if len(logCollector) == maxLogs {
 				close(doneChannel)
 				return

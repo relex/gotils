@@ -105,7 +105,7 @@ func SetAutoFormat() {
 	case "", "auto":
 		priv.RootLogger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
 	default:
-		Fatal("Invalid log color mode: \"" + string(colorYN) + "\"")
+		Fatal("Invalid log color mode: \"" + colorYN + "\"")
 	}
 }
 
@@ -205,9 +205,9 @@ func Exit(code int) {
 	logrus.Exit(code)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Logging via the root logger
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/*****************************************************************************
+ * Logging via the root logger
+ *****************************************************************************/
 
 // Root gets the root logger that can be used to create sub-loggers.
 // Calling global logging functions in the package is the same as calling methods in the root logger.
@@ -329,9 +329,9 @@ func WithField(key string, value interface{}) Logger {
 	return wrapRootLogger(entry)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Logging or Structured logging via sublogger (Logrus entry)
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/*****************************************************************************
+ * Logging or Structured logging via sublogger (Logrus entry)
+ *****************************************************************************/
 
 // Panic logs critical errors and exits the program
 func (logger Logger) Panic(args ...interface{}) {
@@ -433,6 +433,47 @@ func (logger Logger) WithField(key string, value interface{}) Logger {
 		return wrapLoggerWithNewComponent(entry, value)
 	}
 	return wrapLogger(entry, logger)
+}
+
+// Sprint prints the given arguments with fields in this logger to a string
+//
+// e.g. "[MyClass] name=Foo status=200 My message"
+func (logger Logger) Sprint(args ...interface{}) string {
+	strList := logger.buildSprintPrefixes()
+
+	if s := fmt.Sprint(args...); len(s) > 0 {
+		strList = append(strList, s)
+	}
+
+	return strings.Join(strList, " ")
+}
+
+// Sprintf formats the given arguments with fields in this logger to a string
+//
+// e.g. "[MyClass] name=Foo status=200  Hi '<someone>'"
+func (logger Logger) Sprintf(format string, args ...interface{}) string {
+	strList := logger.buildSprintPrefixes()
+
+	if s := fmt.Sprintf(format, args...); len(s) > 0 {
+		strList = append(strList, s)
+	}
+
+	return strings.Join(strList, " ")
+}
+
+func (logger Logger) buildSprintPrefixes() []string {
+	prefixList := make([]string, 0, 3)
+
+	comp, hasComp := logger.entry.Data[priv.LabelComponent]
+	if hasComp {
+		prefixList = append(prefixList, fmt.Sprintf("[%v]", comp))
+	}
+
+	if dataStr := priv.FormatFields(logger.entry.Data); len(dataStr) > 0 {
+		prefixList = append(prefixList, dataStr)
+	}
+
+	return prefixList
 }
 
 func wrapRootLogger(entry *logrus.Entry) Logger {
