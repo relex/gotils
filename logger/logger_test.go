@@ -15,6 +15,7 @@ package logger
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -79,7 +80,7 @@ func TestConsoleLogger(t *testing.T) {
 
 func TestFallbackTextLogger(t *testing.T) {
 	before()
-	priv.RootLogger.SetFormatter(priv.NewConsoleLogFormatter(false, nil))
+	root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, nil))
 	WithFields(Fields{
 		"path_with_quote_nospace": "\"hello\"", // shouldn't be quoted
 		"path_with_quote":         "\"hello world\"",
@@ -148,7 +149,7 @@ func TestForwardBuffered(t *testing.T) {
 	doneChannel := make(chan bool)
 	// start without listener, let forwarding fail and be retried
 	endpoint := "127.0.0.1:51400"
-	priv.RootLogger.Hooks.Add(priv.NewUpstreamTCPBufferedHook(endpoint))
+	root.entry.Logger.Hooks.Add(priv.NewUpstreamTCPBufferedHook(endpoint))
 	before()
 	Info("Hey there!")
 	Error("WTF!")
@@ -215,6 +216,28 @@ func TestFormat(t *testing.T) {
 		"name":   "Foo Bar",
 		"status": 123,
 	}).Sprint("hey", 456, "there"))
+}
+
+func TestStructuredError(t *testing.T) {
+	insideError := WithFields(Fields{
+		priv.LabelComponent: "Inside",
+		"url":               "http://not-here/x",
+		"status":            404,
+	}).Eprintf("something %s", "bad")
+
+	assert.Equal(t, `errorComponent=Inside status=404 url=http://not-here/x something bad`,
+		fmt.Sprint(insideError))
+
+	outsideLogger := WithFields(Fields{
+		priv.LabelComponent: "Outside",
+		"host":              "server1.com",
+		"url":               "http://not here",
+	})
+
+	assert.Equal(t, `[Outside] errorComponent=Inside host=server1.com status=404 url=http://not-here/x got an error: something bad`,
+		outsideLogger.Sprintf("got an error: %v", insideError))
+
+	assert.True(t, errors.Is(outsideLogger.Ewrap(os.ErrNotExist), os.ErrNotExist))
 }
 
 func startUpstreamListener(endpoint string, logCollector chan string, maxLogs int, doneChannel chan bool) {
