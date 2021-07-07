@@ -111,7 +111,7 @@ func (f *ConsoleLogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 	strHead := formatAnsi(fmt.Sprintf("%-12s %-5s", entry.Time.Format(shortTimestamp), levelStr), levelColor, ansiBold)
 	if comp, ok := entry.Data[LabelComponent]; ok {
-		strHead = strHead + " " + formatAnsi(fmt.Sprintf("%v", comp), levelColor, ansiUnderline)
+		strHead = strHead + " " + formatAnsi(fmt.Sprint(comp), levelColor, ansiUnderline)
 	}
 	strBody := formatAnsi(entry.Message, levelColor)
 	strTail := ""
@@ -158,7 +158,7 @@ func FormatFields(fields logrus.Fields) string {
 		if key == LabelComponent {
 			continue
 		}
-		v := fmt.Sprintf("%v", fields[key])
+		v := fmt.Sprint(fields[key])
 		if strings.Contains(v, " ") {
 			fieldStrings = append(fieldStrings, fmt.Sprintf("%s=\"%s\"", key, fieldsFormatReplacer.Replace(v)))
 		} else {
@@ -177,7 +177,7 @@ func formatFieldsColored(fields logrus.Fields, color string) string {
 		}
 		val := fields[key]
 		fieldStrings = append(fieldStrings, formatAnsi(fmt.Sprintf("%s=", key), color, ansiItalic, ansiDimmed)+
-			formatAnsi(fmt.Sprintf("%v", val), color, ansiItalic))
+			formatAnsi(fmt.Sprint(val), color, ansiItalic))
 	}
 	return strings.Join(fieldStrings, " ")
 }
