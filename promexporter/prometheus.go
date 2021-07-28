@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"sort"
 	"time"
 
 	"github.com/iancoleman/strcase"
@@ -108,7 +109,7 @@ func (c customGatherer) Gather() ([]*dto.MetricFamily, error) {
 	return c.oldGatherer.Gather()
 }
 
-// GetLabelNames creates a list of label names out of struct fields to use in Prometheus metric
+// GetLabelNames creates a sorted list of label names out of struct fields to use in Prometheus metric
 // The label can be specified by a `label` tag, e.g.:
 // ```go
 // type ProcessLabels struct {
@@ -124,14 +125,18 @@ func GetLabelNames(labelStruct interface{}) []string {
 		f := t.Field(i)
 		tag := f.Tag.Get("label")
 		if tag == "" {
+			tag = f.Tag.Get("json")
+		}
+		if tag == "" {
 			tag = strcase.ToSnake(f.Name)
 		}
 		labels[i] = tag
 	}
+	sort.Strings(labels)
 	return labels
 }
 
-// GetLabelValues creates a list of label values out of struct field values to use in Prometheus metric
+// GetLabelValues creates a sorted list of label values out of struct field values to use in Prometheus metric
 // See GetLabelNames function for the context
 // If a field type is not string it will be converted to string automatically, see https://golang.org/pkg/reflect/#Value.String
 func GetLabelValues(labelStruct interface{}) []string {
@@ -141,5 +146,6 @@ func GetLabelValues(labelStruct interface{}) []string {
 		f := v.Field(i)
 		labels[i] = f.String()
 	}
+	sort.Strings(labels)
 	return labels
 }
