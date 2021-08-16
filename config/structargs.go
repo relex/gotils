@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
+	"github.com/relex/gotils/config/flagext"
 	"github.com/relex/gotils/logger"
 	"github.com/spf13/pflag"
 )
@@ -129,6 +130,8 @@ func tryAddReflectedFlag(flags *pflag.FlagSet, fieldValue reflect.Value, name, h
 		flags.IPMaskVar(fieldValue.Addr().Interface().(*net.IPMask), name, fieldValue.Interface().(net.IPMask), help)
 	case "time.Duration":
 		flags.DurationVar(fieldValue.Addr().Interface().(*time.Duration), name, fieldValue.Interface().(time.Duration), help)
+	case "time.Time":
+		flagext.TimeVar(flags, fieldValue.Addr().Interface().(*time.Time), name, fieldValue.Interface().(time.Time), help)
 	case "[]net.IP":
 		flags.IPSliceVar(fieldValue.Addr().Interface().(*[]net.IP), name, fieldValue.Interface().([]net.IP), help)
 	case "[]time.Duration":
