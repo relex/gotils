@@ -10,6 +10,11 @@ import (
 
 type timeValue time.Time
 
+const (
+	localDateLayout = "2006-01-02"
+	localTimeLayout = "2006-01-02T15:04:05"
+)
+
 func newTimeValue(val time.Time, p *time.Time) *timeValue {
 	*p = val
 	return (*timeValue)(p)
@@ -17,10 +22,24 @@ func newTimeValue(val time.Time, p *time.Time) *timeValue {
 
 func (i *timeValue) String() string { return time.Time(*i).String() }
 func (i *timeValue) Set(s string) error {
-	tm, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(s))
+	var tm time.Time
+	var err error
+
+	s = strings.TrimSpace(s)
+
+	switch {
+	case len(s) == len(localDateLayout):
+		tm, err = time.ParseInLocation(localDateLayout, s, time.Local)
+	case len(s) == len(localTimeLayout):
+		tm, err = time.ParseInLocation(localTimeLayout, s, time.Local)
+	default:
+		tm, err = time.Parse(time.RFC3339Nano, s)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to parse time '%s': %w", s, err)
 	}
+
 	*i = timeValue(tm)
 	return nil
 }
