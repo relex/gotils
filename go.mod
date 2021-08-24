@@ -3,6 +3,7 @@ module github.com/relex/gotils
 go 1.16
 
 require (
+	github.com/denisenkom/go-mssqldb v0.10.0 // indirect
 	github.com/iancoleman/strcase v0.2.0
 	github.com/mileusna/crontab v1.0.1
 	github.com/prometheus/client_golang v1.11.0
