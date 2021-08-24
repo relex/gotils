@@ -1,62 +1,16 @@
-package dbutil
+package mssqlutil
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 
 	mssql "github.com/denisenkom/go-mssqldb"
 	"github.com/relex/gotils/logger"
 )
 
-const azureSqlRetryAttempts = 10
-
-func RunSession(sqlURL string, do func(tx *sql.Tx) error) {
-	var retryAttempts int
-	if strings.Contains(sqlURL, "database.windows.net") {
-		retryAttempts = azureSqlRetryAttempts
-	} else {
-		retryAttempts = 0
-	}
-
-	db, dbErr := sql.Open("sqlserver", sqlURL)
-	if dbErr != nil {
-		logger.Fatalf("failed to open DB driver: %v", dbErr)
-	}
-	defer db.Close()
-
-	var round = 0
-	var conn *sql.Conn
-	var connErr error
-	for {
-		round++
-		conn, connErr = db.Conn(context.Background())
-		if connErr != nil {
-			if round > retryAttempts || !strings.Contains(connErr.Error(), " is not currently available") {
-				logger.Fatalf("failed to connect to DB: %v", connErr)
-			}
-		} else {
-			break
-		}
-		logger.Warnf("reconnect attempt #%d after %v", round, connErr)
-	}
-	defer conn.Close()
-
-	tx, txErr := conn.BeginTx(context.Background(), nil)
-	if txErr != nil {
-		logger.Fatalf("failed to begin transaction: %v", txErr)
-	}
-
-	if err := do(tx); err != nil {
-		logger.Fatalf("failed during DB session: %v", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		logger.Fatalf("failed to commit ")
-	}
-}
-
+// BulkInsert performs SQL Server bulk-insert from input rows represented by (rowCount, getRow)
+//
+// No reflection here. The getRow parameter must transform source data fields into formats compatible to the destination columns
 func BulkInsert(tx *sql.Tx, tableName string, columnNames []string, rowCount int, getRow func(index int) []interface{}) (int64, error) {
 	stmt, stmtErr := tx.Prepare(mssql.CopyIn(tableName, mssql.BulkOptions{}, columnNames...))
 	if stmtErr != nil {

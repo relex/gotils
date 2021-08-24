@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// ExecOne executes a query within the given transaction and returns the number of affected rows
 func ExecOne(tx *sql.Tx, query string, args ...interface{}) (int64, error) {
 	result, execErr := tx.Exec(query, args...)
 	if execErr != nil {
