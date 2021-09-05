@@ -47,7 +47,9 @@ func TestCacherGet(t *testing.T) {
 func TestCacherGetMetrics(t *testing.T) {
 	StartHTTPServer("../test_data//cacher-response-cache.json")
 
-	assert.Equal(t, `http_outgoing_requests_errors_total 0`+"\n",
+	assert.Equal(t,
+		// `http_outgoing_requests_errors_total 0`+"\n",
+		`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 1`+"\n",
 		promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
 
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
@@ -55,10 +57,13 @@ func TestCacherGetMetrics(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.NotNil(t, body)
-	assert.Equal(t, `http_outgoing_requests_errors_total 0`+"\n"+
+	assert.Equal(t,
+		// `http_outgoing_requests_errors_total 0`+"\n"+
 		`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 1`+"\n",
 		promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
-	assert.Equal(t, "cacher_cache_requests_total 0\n", promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
+	// A value of zero is seen as empty:
+	// "cacher_cache_requests_total 0\n"
+	assert.Equal(t, "", promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
 
 	// test increase
 	{
@@ -67,10 +72,15 @@ func TestCacherGetMetrics(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, body)
-		assert.Equal(t, `http_outgoing_requests_errors_total 0`+"\n"+
+		assert.Equal(t,
+			// Not printed if zero:
+			// `http_outgoing_requests_errors_total 0`+"\n"+
 			`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 2`+"\n",
 			promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
-		assert.Equal(t, "cacher_cache_requests_total 0\n", promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
+		assert.Equal(t,
+			// "cacher_cache_requests_total 0\n"
+			"",
+			promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
 	}
 
 	StopHTTPServer()
