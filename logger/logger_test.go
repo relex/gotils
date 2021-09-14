@@ -205,7 +205,7 @@ func TestForwardUnbuffered(t *testing.T) {
 	assert.True(t, strings.Contains(logs[3], "{\"key1\":\"val1\",\"key2\":\"val2\",\"key3\":\"val3\",\"level\":\"warning\",\"message\":\"OK\""))
 }
 
-func TestFormat(t *testing.T) {
+func TestStructuredFormat(t *testing.T) {
 	assert.Equal(t, `[Storage] name="Foo Bar" status=123 hello world: 10`, WithFields(Fields{
 		priv.LabelComponent: "Storage",
 		"name":              "Foo Bar",

@@ -11,27 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promexporter
+package promext
 
 import (
-	"net/http"
-	"time"
+	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/push"
-	"github.com/relex/gotils/logger"
+	"github.com/stretchr/testify/assert"
 )
 
-const pushMetricsTimeout = 20 * time.Second
+func TestLazyRWCounter(t *testing.T) {
+	cv := NewLazyRWCounterVec(prometheus.CounterOpts{Name: "testrw_counter_lazy"}, []string{"color"})
+	cv.WithLabelValues("red").Add(3)
+	cv.WithLabelValues("green")
+	cv.WithLabelValues("blue").Add(1)
+	cv.WithLabelValues("yellow")
+	assert.EqualValues(t, 4, SumMetricValues(cv))
 
-// PushMetrics pushes all metrics in the default registry to the target URL
-//
-// The URL should contain no path for the official pushgateway
-func PushMetrics(url string, job string) {
-	client := &http.Client{}
-	client.Timeout = pushMetricsTimeout // default is no timeout
-	err := push.New(url, job).Gatherer(prometheus.DefaultGatherer).Client(client).Push()
-	if err != nil {
-		logger.Error("failed to push metrics: ", err)
-	}
+	prometheus.MustRegister(cv)
+	assert.Equal(t, `testrw_counter_lazy{color="blue"} 1
+testrw_counter_lazy{color="red"} 3
+`, DumpMetricsForTest("testrw_counter_lazy", false))
 }

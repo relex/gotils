@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promexporter
+package promext
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
-	"github.com/relex/gotils/logger"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -69,11 +69,15 @@ func (c *rwCounter) Write(out *dto.Metric) error {
 }
 
 // Describe implements prometheus.Collector.
+//
+// The function is never called when the counter is under a vector
 func (c *rwCounter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.Desc()
 }
 
 // Collect implements prometheus.Collector.
+//
+// The function is never called when the counter is under a vector
 func (c *rwCounter) Collect(ch chan<- prometheus.Metric) {
 	ch <- c
 }
@@ -98,7 +102,7 @@ func NewRWCounterVec(opts prometheus.CounterOpts, labelNames []string) *RWCounte
 	return &RWCounterVec{
 		MetricVec: prometheus.NewMetricVec(desc, func(lvs ...string) prometheus.Metric {
 			if len(lvs) != len(labelNames) {
-				logger.Panic(makeInconsistentCardinalityError(fqName, labelNames, lvs))
+				panic(makeInconsistentCardinalityError(fqName, labelNames, lvs))
 			}
 			result := &rwCounter{
 				valBits:    0,
@@ -116,7 +120,7 @@ func NewRWCounterVec(opts prometheus.CounterOpts, labelNames []string) *RWCounte
 func (v *RWCounterVec) WithLabelValues(lvs ...string) RWCounter {
 	c, err := v.GetMetricWithLabelValues(lvs...)
 	if err != nil {
-		logger.Panicf("RWCounterVec %s{%v}: %v", v.fqName, lvs, err)
+		panic(fmt.Sprintf("RWCounterVec %s{%v}: %v", v.fqName, lvs, err))
 	}
 	return c
 }
@@ -135,7 +139,7 @@ func (v *RWCounterVec) GetMetricWithLabelValues(lvs ...string) (RWCounter, error
 func (v *RWCounterVec) MustCurryWith(labels prometheus.Labels) *RWCounterVec {
 	vec, err := v.MetricVec.CurryWith(labels)
 	if err != nil {
-		logger.Panicf("RWCounterVec %s{%v}: %v", v.fqName, labels, err)
+		panic(fmt.Sprintf("RWCounterVec %s{%v}: %v", v.fqName, labels, err))
 	}
 	return &RWCounterVec{vec, v.fqName}
 }

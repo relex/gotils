@@ -11,7 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promexporter
+// Package promext contains commonly-used metric types and pure utility functions
+//
+// Types and functions here are at the lowest level and should not call Logger and other packages, to avoid cyclic dependency
+package promext
 
 import (
 	"fmt"

@@ -23,6 +23,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/relex/gotils/logger/priv"
+	"github.com/relex/gotils/promexporter/promext"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,13 +35,13 @@ type LogLevel string
 // Logger should always be passed by value
 type Logger struct {
 	entry           *logrus.Entry
-	counterForPanic prometheus.Counter
-	counterForFatal prometheus.Counter
-	counterForError prometheus.Counter
-	counterForWarn  prometheus.Counter
-	counterForInfo  prometheus.Counter
-	counterForDebug prometheus.Counter
-	counterForTrace prometheus.Counter
+	counterForPanic promext.RWCounter
+	counterForFatal promext.RWCounter
+	counterForError promext.RWCounter
+	counterForWarn  promext.RWCounter
+	counterForInfo  promext.RWCounter
+	counterForDebug promext.RWCounter
+	counterForTrace promext.RWCounter
 }
 
 // Fields type, used to pass to `WithFields`
@@ -74,7 +75,7 @@ var (
 		DebugLevel:    logrus.DebugLevel,
 		TraceLevel:    logrus.TraceLevel,
 	}
-	counterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+	counterVec = promext.NewLazyRWCounterVec(prometheus.CounterOpts{
 		Name: "logger_logs_total",
 		Help: "Numbers of logs including warnings",
 	}, []string{priv.LabelComponent, "level"})
