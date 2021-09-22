@@ -23,10 +23,12 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-// DumpMetricsFrom dumps all metrics in the given collectors into the .prom text format
+// DumpMetricsFrom dumps matched metrics from the given collectors into the .prom text format
+//
+// prefix can be empty to include all metrics
 //
 // Extra check is enabled by using prometheus.PedanticRegistry
-func DumpMetricsFrom(skipComments, skipZeroValues bool, prefix string, collectors ...prometheus.Collector) string {
+func DumpMetricsFrom(prefix string, skipComments, skipZeroValues bool, collectors ...prometheus.Collector) string {
 	gatherer := prometheus.NewPedanticRegistry()
 	for _, coll := range collectors {
 		if err := gatherer.Register(coll); err != nil {
@@ -37,7 +39,9 @@ func DumpMetricsFrom(skipComments, skipZeroValues bool, prefix string, collector
 	return DumpMetrics(prefix, skipComments, skipZeroValues, gatherer)
 }
 
-// DumpMetrics dumps metrics from the given gatherer(s) in the .prom text
+// DumpMetrics dumps matched metrics from the given gatherer(s) into the .prom text format
+//
+// prefix can be empty to include all metrics
 //
 // If no gatherers is provided, the DefaultGatherer is used
 func DumpMetrics(prefix string, skipComments, skipZeroValues bool, gatherers ...prometheus.Gatherer) string {
