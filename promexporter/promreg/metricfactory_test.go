@@ -37,5 +37,5 @@ testmetricfactory_child1_childgaugevec{class="X",test="TestMetricFactory",type="
 testmetricfactory_child1_childgaugevec{class="Y",test="TestMetricFactory",type="goroutine"} 16
 testmetricfactory_mycounter{name="foo",test="TestMetricFactory"} 7
 testmetricfactory_mycountervec{category="book",test="TestMetricFactory"} 5
-`, promext.DumpMetricsFrom(mfactory, "", true, false))
+`, promext.DumpMetrics("", true, false, mfactory))
 }

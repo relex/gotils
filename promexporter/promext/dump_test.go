@@ -38,7 +38,7 @@ func TestMetricsDumpAndSum(t *testing.T) {
 
 	reg := prometheus.NewPedanticRegistry()
 	assert.Nil(t, reg.Register(gv))
-	dumpResult := DumpMetricsFrom(reg, "test_", true, false)
+	dumpResult := DumpMetrics("test_", true, false, reg)
 	assert.Equal(t, `test_gauge{brand="T",class="X",group="Test"} 1
 test_gauge{brand="V",class="Boat",group="Vehicle"} 7
 test_gauge{brand="V",class="Car",group="Vehicle"} 17

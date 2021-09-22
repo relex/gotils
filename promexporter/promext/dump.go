@@ -23,15 +23,10 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-// DumpMetrics dumps metrics from the default registry in the .prom text format
-func DumpMetrics(prefix string, skipComments, skipZeroValues bool) string {
-	return DumpMetricsFrom(prometheus.DefaultGatherer, prefix, skipComments, skipZeroValues)
-}
-
-// DumpMetricsFromCollectors dumps all metrics in the given collectors into the .prom text format
+// DumpMetricsFrom dumps all metrics in the given collectors into the .prom text format
 //
 // Extra check is enabled by using prometheus.PedanticRegistry
-func DumpMetricsFromCollectors(skipComments, skipZeroValues bool, prefix string, collectors ...prometheus.Collector) string {
+func DumpMetricsFrom(skipComments, skipZeroValues bool, prefix string, collectors ...prometheus.Collector) string {
 	gatherer := prometheus.NewPedanticRegistry()
 	for _, coll := range collectors {
 		if err := gatherer.Register(coll); err != nil {
@@ -39,12 +34,24 @@ func DumpMetricsFromCollectors(skipComments, skipZeroValues bool, prefix string,
 		}
 	}
 
-	return DumpMetricsFrom(gatherer, prefix, skipComments, skipZeroValues)
+	return DumpMetrics(prefix, skipComments, skipZeroValues, gatherer)
 }
 
-// DumpMetricsFrom dumps metrics from the given gatherer in the .prom text
-func DumpMetricsFrom(gatherer prometheus.Gatherer, prefix string, skipComments, skipZeroValues bool) string {
-	metricFamilies, err := gatherer.Gather()
+// DumpMetrics dumps metrics from the given gatherer(s) in the .prom text
+//
+// If no gatherers is provided, the DefaultGatherer is used
+func DumpMetrics(prefix string, skipComments, skipZeroValues bool, gatherers ...prometheus.Gatherer) string {
+	var compositeGatherer prometheus.Gatherer
+	switch len(gatherers) {
+	case 0:
+		compositeGatherer = prometheus.DefaultGatherer
+	case 1:
+		compositeGatherer = gatherers[0]
+	default:
+		compositeGatherer = prometheus.Gatherers(gatherers)
+	}
+
+	metricFamilies, err := compositeGatherer.Gather()
 	if err != nil {
 		panic(fmt.Sprintf("failed to gather metrics: %v", err))
 	}
