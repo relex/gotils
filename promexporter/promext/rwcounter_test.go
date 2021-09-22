@@ -35,5 +35,5 @@ func TestRWCounter(t *testing.T) {
 	assert.Equal(t, `testrw_counter_norm{category="Book",name="Foo",part="main"} 15
 testrw_counter_norm{category="Book",name="Foo",part="part"} 3
 testrw_counter_norm{category="PC",name="Mac",part="Disk"} 100
-`, DumpMetricsForTest("testrw_counter_norm", false))
+`, DumpMetrics("testrw_counter_norm", true, false))
 }

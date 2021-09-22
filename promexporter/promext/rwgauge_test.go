@@ -36,5 +36,5 @@ func TestRWGauge(t *testing.T) {
 	assert.Equal(t, `testrw_gauge{brand="T",class="X",group="Test"} 1
 testrw_gauge{brand="V",class="Boat",group="Vehicle"} 7
 testrw_gauge{brand="V",class="Car",group="Vehicle"} 17
-`, DumpMetricsForTest("testrw_gauge", false))
+`, DumpMetrics("testrw_gauge", true, false))
 }

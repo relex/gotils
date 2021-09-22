@@ -27,6 +27,20 @@ import (
 	"github.com/relex/gotils/logger"
 )
 
+const metricListenerIndexPage = `<html>
+<head>
+	<title>%s metric listener</title>
+</head>
+<body>
+	<h1>Metric listener for %s</h1>
+	<ul>
+		<li><a href='/debug/pprof'>/debug/pprof</a></li>
+		<li><a href='/metrics'>/metrics</a></li>
+	</ul>
+</body>
+</html>
+`
+
 // LaunchMetricListener starts a HTTP server for Prometheus metrics and optionally /debug/pprof
 //
 // If the address contains unspecified port (":0"), a random port is assigned and set to server.Addr
@@ -68,19 +82,7 @@ func createServerMux(gatherer prometheus.Gatherer) *http.ServeMux {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		appName := filepath.Base(os.Args[0])
-		fmt.Fprintf(w, `
-<html>
-	<head>
-		<title>%s metric listener</title>
-	</head>
-	<body>
-		<h1>Metric listener for %s</h1>
-		<ul>
-			<li><a href='/debug/pprof'>/debug/pprof</a></li>
-			<li><a href='/metrics'>/metrics</a></li>
-		</ul>
-	</body>
-</html>`, appName, appName)
+		fmt.Fprintf(w, metricListenerIndexPage, appName, appName)
 	})
 
 	return mux

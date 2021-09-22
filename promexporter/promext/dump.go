@@ -23,16 +23,14 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-// DumpMetricsForTest dumps metrics from default registry in the .prom text format without comments
-//
-// DO NOT use in production mode
-func DumpMetricsForTest(prefix string, skipZeroValues bool) string {
-	return DumpMetricsFrom(prometheus.DefaultGatherer, prefix, true, skipZeroValues)
+// DumpMetrics dumps metrics from the default registry in the .prom text format
+func DumpMetrics(prefix string, skipComments, skipZeroValues bool) string {
+	return DumpMetricsFrom(prometheus.DefaultGatherer, prefix, skipComments, skipZeroValues)
 }
 
-// DumpMetricsFromCollectors dumps all metrics in the given collectors into the .prom text format without comments
+// DumpMetricsFromCollectors dumps all metrics in the given collectors into the .prom text format
 //
-// Extra check is enabled; DO NOT use in production mode
+// Extra check is enabled by using prometheus.PedanticRegistry
 func DumpMetricsFromCollectors(skipComments, skipZeroValues bool, prefix string, collectors ...prometheus.Collector) string {
 	gatherer := prometheus.NewPedanticRegistry()
 	for _, coll := range collectors {
@@ -45,8 +43,6 @@ func DumpMetricsFromCollectors(skipComments, skipZeroValues bool, prefix string,
 }
 
 // DumpMetricsFrom dumps metrics from the given gatherer in the .prom text
-//
-// DO NOT use in production mode
 func DumpMetricsFrom(gatherer prometheus.Gatherer, prefix string, skipComments, skipZeroValues bool) string {
 	metricFamilies, err := gatherer.Gather()
 	if err != nil {
@@ -78,8 +74,6 @@ func DumpMetricsFrom(gatherer prometheus.Gatherer, prefix string, skipComments, 
 // SumMetricValues sums all the values of a given Prometheus Collector (GaugeVec or CounterVec)
 //
 // Only works with top-level MetricVec, not curried MetricVec
-//
-// For testing only
 func SumMetricValues(c prometheus.Collector) float64 {
 	// modified from github.com/prometheus/client_golang/prometheus/testutil.ToFloat64
 	var (
