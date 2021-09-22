@@ -25,14 +25,28 @@ import (
 
 // DumpMetricsForTest dumps metrics from default registry in the .prom text format without comments
 //
-// For testing only
+// DO NOT use in production mode
 func DumpMetricsForTest(prefix string, skipZeroValues bool) string {
 	return DumpMetricsFrom(prometheus.DefaultGatherer, prefix, true, skipZeroValues)
 }
 
+// DumpMetricsFromCollectors dumps all metrics in the given collectors into the .prom text format without comments
+//
+// Extra check is enabled; DO NOT use in production mode
+func DumpMetricsFromCollectors(skipComments, skipZeroValues bool, prefix string, collectors ...prometheus.Collector) string {
+	gatherer := prometheus.NewPedanticRegistry()
+	for _, coll := range collectors {
+		if err := gatherer.Register(coll); err != nil {
+			panic(fmt.Sprintf("failed to register collector %v: %v", coll, err))
+		}
+	}
+
+	return DumpMetricsFrom(gatherer, prefix, skipComments, skipZeroValues)
+}
+
 // DumpMetricsFrom dumps metrics from the given gatherer in the .prom text
 //
-// For testing only
+// DO NOT use in production mode
 func DumpMetricsFrom(gatherer prometheus.Gatherer, prefix string, skipComments, skipZeroValues bool) string {
 	metricFamilies, err := gatherer.Gather()
 	if err != nil {
@@ -90,16 +104,7 @@ func SumMetricValues(c prometheus.Collector) float64 {
 			// should be impossible
 			panic(fmt.Sprintf("failed to read metric '%s': %s", m.Desc(), err.Error()))
 		}
-		if pb.Gauge != nil {
-			sum += pb.Gauge.GetValue()
-		}
-		if pb.Counter != nil {
-			sum += pb.Counter.GetValue()
-		}
-		if pb.Untyped != nil {
-			sum += pb.Untyped.GetValue()
-		}
-
+		sum += GetExportedMetricValue(pb)
 	}
 	return sum
 }
