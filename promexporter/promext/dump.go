@@ -23,18 +23,39 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-// DumpMetricsForTest dumps metrics from default registry in the .prom text format without comments
+// DumpMetricsFrom dumps matched metrics from the given collectors into the .prom text format
 //
-// For testing only
-func DumpMetricsForTest(prefix string, skipZeroValues bool) string {
-	return DumpMetricsFrom(prometheus.DefaultGatherer, prefix, true, skipZeroValues)
+// prefix can be empty to include all metrics
+//
+// Extra check is enabled by using prometheus.PedanticRegistry
+func DumpMetricsFrom(prefix string, skipComments, skipZeroValues bool, collectors ...prometheus.Collector) string {
+	gatherer := prometheus.NewPedanticRegistry()
+	for _, coll := range collectors {
+		if err := gatherer.Register(coll); err != nil {
+			panic(fmt.Sprintf("failed to register collector %v: %v", coll, err))
+		}
+	}
+
+	return DumpMetrics(prefix, skipComments, skipZeroValues, gatherer)
 }
 
-// DumpMetricsFrom dumps metrics from the given gatherer in the .prom text
+// DumpMetrics dumps matched metrics from the given gatherer(s) into the .prom text format
 //
-// For testing only
-func DumpMetricsFrom(gatherer prometheus.Gatherer, prefix string, skipComments, skipZeroValues bool) string {
-	metricFamilies, err := gatherer.Gather()
+// prefix can be empty to include all metrics
+//
+// If no gatherers is provided, the DefaultGatherer is used
+func DumpMetrics(prefix string, skipComments, skipZeroValues bool, gatherers ...prometheus.Gatherer) string {
+	var compositeGatherer prometheus.Gatherer
+	switch len(gatherers) {
+	case 0:
+		compositeGatherer = prometheus.DefaultGatherer
+	case 1:
+		compositeGatherer = gatherers[0]
+	default:
+		compositeGatherer = prometheus.Gatherers(gatherers)
+	}
+
+	metricFamilies, err := compositeGatherer.Gather()
 	if err != nil {
 		panic(fmt.Sprintf("failed to gather metrics: %v", err))
 	}
@@ -64,8 +85,6 @@ func DumpMetricsFrom(gatherer prometheus.Gatherer, prefix string, skipComments, 
 // SumMetricValues sums all the values of a given Prometheus Collector (GaugeVec or CounterVec)
 //
 // Only works with top-level MetricVec, not curried MetricVec
-//
-// For testing only
 func SumMetricValues(c prometheus.Collector) float64 {
 	// modified from github.com/prometheus/client_golang/prometheus/testutil.ToFloat64
 	var (
@@ -90,16 +109,7 @@ func SumMetricValues(c prometheus.Collector) float64 {
 			// should be impossible
 			panic(fmt.Sprintf("failed to read metric '%s': %s", m.Desc(), err.Error()))
 		}
-		if pb.Gauge != nil {
-			sum += pb.Gauge.GetValue()
-		}
-		if pb.Counter != nil {
-			sum += pb.Counter.GetValue()
-		}
-		if pb.Untyped != nil {
-			sum += pb.Untyped.GetValue()
-		}
-
+		sum += GetExportedMetricValue(pb)
 	}
 	return sum
 }

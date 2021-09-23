@@ -37,27 +37,28 @@ func TestMetricsDumpAndSum(t *testing.T) {
 	assert.EqualValues(t, 25, SumMetricValues(gv))
 
 	reg := prometheus.NewPedanticRegistry()
-	reg.Register(gv)
-	dumpResult := DumpMetricsFrom(reg, "test_", true, false)
+	assert.Nil(t, reg.Register(gv))
+	dumpResult := DumpMetrics("test_", true, false, reg)
 	assert.Equal(t, `test_gauge{brand="T",class="X",group="Test"} 1
 test_gauge{brand="V",class="Boat",group="Vehicle"} 7
 test_gauge{brand="V",class="Car",group="Vehicle"} 17
 `, dumpResult)
 
 	t.Run("compare against metrics listener", func(t *testing.T) {
-		prometheus.DefaultRegisterer.Register(gv)
+		assert.Nil(t, prometheus.DefaultRegisterer.Register(gv))
 
 		http.Handle("/metrics", promhttp.Handler())
 
 		lsnr, lsnrErr := net.Listen("tcp", "localhost:0")
 		assert.Nil(t, lsnrErr)
 		srv := &http.Server{}
-		go srv.Serve(lsnr)
+		go func() { _ = srv.Serve(lsnr) }()
 
 		rsp, httpErr := http.Get(fmt.Sprintf("http://%s/metrics", lsnr.Addr().String()))
 		assert.Nil(t, httpErr)
 		metrics, rspErr := ioutil.ReadAll(rsp.Body)
 		assert.Nil(t, rspErr)
+		assert.Nil(t, rsp.Body.Close())
 
 		allMetricLines := strings.Split(string(metrics), "\n")
 		loggerMetricLines := strings.Builder{}

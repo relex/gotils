@@ -31,5 +31,5 @@ func TestLazyRWCounter(t *testing.T) {
 	prometheus.MustRegister(cv)
 	assert.Equal(t, `testrw_counter_lazy{color="blue"} 1
 testrw_counter_lazy{color="red"} 3
-`, DumpMetricsForTest("testrw_counter_lazy", false))
+`, DumpMetrics("testrw_counter_lazy", true, false))
 }
