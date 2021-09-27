@@ -46,11 +46,14 @@ func TestCacherGet(t *testing.T) {
 
 func TestCacherGetMetrics(t *testing.T) {
 	StartHTTPServer("../test_data//cacher-response-cache.json")
-
 	assert.Equal(t,
 		// `http_outgoing_requests_errors_total 0`+"\n",
 		`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 1`+"\n",
 		promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
+	// We should not have made any HTTP requests yet
+	assert.Equal(t,
+		"",
+		promexporter.DumpMetricsForTest("cacher_requests_total", false))
 
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
 	body, err := GetFromURLOrDefaultCache(req, cacheDir)
@@ -61,6 +64,9 @@ func TestCacherGetMetrics(t *testing.T) {
 		// `http_outgoing_requests_errors_total 0`+"\n"+
 		`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 1`+"\n",
 		promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
+	assert.Equal(t,
+		"cacher_requests_total{url=\"http://localhost:12345\"} 1\n",
+		promexporter.DumpMetricsForTest("cacher_requests_total", false))
 	// A value of zero is seen as empty:
 	// "cacher_cache_requests_total 0\n"
 	assert.Equal(t, "", promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
@@ -75,15 +81,15 @@ func TestCacherGetMetrics(t *testing.T) {
 		assert.Equal(t,
 			"",
 			promexporter.DumpMetricsForTest("cacher_requests_failed_total", false))
-		assert.Equal(t,
-			// Not printed if zero:
-			// `http_outgoing_requests_errors_total 0`+"\n"+
-			`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 2`+"\n",
-			promexporter.DumpMetricsForTest("http_outgoing_requests_", false))
+		// The HTTP request should have succeeded, hence 0 requests to cache
 		assert.Equal(t,
 			// "cacher_cache_requests_total 0\n"
 			"",
 			promexporter.DumpMetricsForTest("cacher_cache_requests_total", false))
+		// But we should have one request more than before
+		assert.Equal(t,
+			"cacher_requests_total{url=\"http://localhost:12345\"} 2\n",
+			promexporter.DumpMetricsForTest("cacher_requests_total", false))
 	}
 
 	StopHTTPServer()

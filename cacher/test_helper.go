@@ -55,6 +55,9 @@ func StartHTTPServer(testFilePath string) {
 func StopHTTPServer() {
 	server.Close()
 	server = http.Server{}
+	totalCacheRequests.Reset()
+	totalRequests.Reset()
+	failedRequests.Reset()
 }
 
 func readFile(path string) []byte {
