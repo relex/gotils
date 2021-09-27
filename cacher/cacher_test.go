@@ -73,6 +73,9 @@ func TestCacherGetMetrics(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, body)
 		assert.Equal(t,
+			"",
+			promexporter.DumpMetricsForTest("cacher_requests_failed_total", false))
+		assert.Equal(t,
 			// Not printed if zero:
 			// `http_outgoing_requests_errors_total 0`+"\n"+
 			`http_outgoing_requests_total{code="200",method="get",recipient="cacher"} 2`+"\n",

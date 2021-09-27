@@ -39,10 +39,24 @@ var (
 		},
 		[]string{"result", "path"})
 
+	totalRequests = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cacher_requests_total",
+			Help: "The total number of requests made by cacher, by URL.",
+		},
+		[]string{"url"})
+
+	failedRequests = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cacher_requests_failed_total",
+			Help: "The total number of requests made by cacher which failed, by URL.",
+		},
+		[]string{"url"})
+
 	// requestDurationHistogram shows the duration of requests
 	requestDurationHistogram = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: "cacher_request_duration_histogram",
+			Name: "cacher_requests_duration_histogram",
 			Help: "Histogram of request duration from cacher",
 		},
 		[]string{"statusCode", "path"},
@@ -51,6 +65,9 @@ var (
 
 func init() {
 	prometheus.MustRegister(requestDurationHistogram)
+	prometheus.MustRegister(totalRequests)
+	prometheus.MustRegister(failedRequests)
+	prometheus.MustRegister(totalCacheRequests)
 }
 
 // getFileNameFromURL computes FNV-1a hash of the URL as filename to avoid name collisions
@@ -112,10 +129,14 @@ func GetFromURLOrDefaultCacheWithCallbackAndClient(req *http.Request, cacheDir s
 
 	requestStartTime := time.Now()
 	resp, reqErr := cacherClient.Do(req)
+	totalRequests.WithLabelValues(req.URL.String()).Inc()
 	requestDuration := time.Since(requestStartTime)
 
 	if reqErr != nil {
-		requestDurationHistogram.WithLabelValues("-1", req.URL.String()).Observe(requestDuration.Seconds())
+		// println(req.URL.String())
+		// TODO: do not increment this metric, for consistency with promhttp; increment an error counter
+		// requestDurationHistogram.WithLabelValues("-1", req.URL.String()).Observe(requestDuration.Seconds())
+		failedRequests.WithLabelValues(req.URL.String()).Inc()
 		return getCache(req.URL, clogger, filepath, onData, fmt.Errorf("failed to open URL: %w", reqErr))
 	}
 
