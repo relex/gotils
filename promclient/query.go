@@ -12,16 +12,22 @@ import (
 	"time"
 )
 
+// queryResponse defines the structure of Prometheus API responses according to https://prometheus.io/docs/prometheus/latest/querying/api/
 type queryResponse struct {
-	Status string            `json:"status"`
-	Data   queryResponseData `json:"data"`
+	Status    string            `json:"status"`
+	Data      queryResponseData `json:"data"`
+	ErrorType string            `json:"errorType"`
+	Error     string            `json:"error"`
+	Warnings  []string          `json:"warnings"`
 }
 
+// queryResponseData defines the shared structure in the "data" field from instant queries and ranged queries
 type queryResponseData struct {
 	ResultType string          `json:"resultType"`
 	Result     json.RawMessage `json:"result"`
 }
 
+// Result types from Prometheus query
 const (
 	InstantVector ResultType = "vector"
 	RangedVector  ResultType = "matrix"
@@ -85,8 +91,10 @@ func queryAPI(baseURL string, path string, parameters map[string]string, timeout
 	}
 
 	if parsedBody.Status != "success" {
-		return fmt.Errorf("failed to execute Prometheus query: %s", parsedBody.Status)
+		return fmt.Errorf("failed to execute Prometheus query: %v", parsedBody)
 	}
+
+	// TODO: handle warnings
 
 	if parsedBody.Data.ResultType != string(resultType) {
 		return fmt.Errorf("invalid query result type: %s", parsedBody.Data.ResultType)
