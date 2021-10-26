@@ -8,7 +8,7 @@ import (
 	"github.com/relex/gotils/logger"
 )
 
-const azureSqlRetryAttempts = 10
+const azureSQLRetryAttempts = 10
 
 // RunSession runs a simple DB session with all actions enclosed within a transaction
 //
@@ -18,7 +18,7 @@ const azureSqlRetryAttempts = 10
 func RunSession(driver string, url string, do func(tx *sql.Tx) error) {
 	var retryAttempts int
 	if strings.Contains(url, "database.windows.net") {
-		retryAttempts = azureSqlRetryAttempts
+		retryAttempts = azureSQLRetryAttempts
 	} else {
 		retryAttempts = 0
 	}
