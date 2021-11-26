@@ -22,7 +22,7 @@ linters:
     - gocyclo
     - goprintffuncname
     # - gosec # CANNOT use until gosec options can be configured here: https://github.com/golangci/golangci-lint/issues/177
-    - interfacer
+    # - interfacer # WRONG warnings and deprecated by the author https://github.com/golangci/golangci-lint/issues/1689
     - prealloc
     # - scopelint # OUTDATED
     - unconvert
