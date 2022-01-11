@@ -30,8 +30,8 @@ const LabelComponent = "component"
 // ConsoleLogFormatter is colored output format for console / terminals
 // It detects the type of output writers automatically and only enables if the type is terminal
 type ConsoleLogFormatter struct {
-	ForceColor        bool                  // Force enable colored mode even for non-terminal log writer
-	FallbackFormatter *logrus.TextFormatter // Fallback formatter to use for non-terminal. If nil, use built-in fallback format (human readable, not for field parsing)
+	ForceColor        bool             // Force enable colored mode even for non-terminal log writer
+	FallbackFormatter logrus.Formatter // Fallback formatter to use for non-terminal. If nil, use built-in fallback format (human readable, not for field parsing)
 	cachedTestResult  *terminalTestResult
 }
 
@@ -75,7 +75,7 @@ var (
 )
 
 // NewConsoleLogFormatter creates a new ConsoleLogFormatter
-func NewConsoleLogFormatter(forceColor bool, fallbackFormatter *logrus.TextFormatter) *ConsoleLogFormatter {
+func NewConsoleLogFormatter(forceColor bool, fallbackFormatter logrus.Formatter) *ConsoleLogFormatter {
 	return &ConsoleLogFormatter{
 		ForceColor:        forceColor,
 		FallbackFormatter: fallbackFormatter,
