@@ -98,7 +98,9 @@ func init() {
 	prometheus.MustRegister(counterVec)
 }
 
-// SetAutoFormat uses environment variable `LOG_COLOR` and terminal detection to configure appropriate log format
+// SetAutoFormat uses the environment variable `LOG_COLOR` and terminal detection to select console or text output format
+//
+// SetAutoFormat is the default choice and always invoked during initialization
 func SetAutoFormat() {
 	colorYN := strings.ToLower(os.Getenv("LOG_COLOR"))
 	switch colorYN {
@@ -108,6 +110,21 @@ func SetAutoFormat() {
 		root.entry.Logger.SetFormatter(priv.TextFormatter)
 	case "", "auto":
 		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
+	default:
+		Fatal("Invalid log color mode: \"" + colorYN + "\"")
+	}
+}
+
+// SetAutoJSONFormat uses the environment variable `LOG_COLOR` and terminal detection to select console or JSON output format
+func SetAutoJSONFormat() {
+	colorYN := strings.ToLower(os.Getenv("LOG_COLOR"))
+	switch colorYN {
+	case "1", "true", "y", "yes", "on":
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(true, priv.JSONFormatter))
+	case "0", "false", "n", "no", "off":
+		root.entry.Logger.SetFormatter(priv.JSONFormatter)
+	case "", "auto":
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.JSONFormatter))
 	default:
 		Fatal("Invalid log color mode: \"" + colorYN + "\"")
 	}
