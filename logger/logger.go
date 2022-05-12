@@ -14,6 +14,7 @@
 package logger
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/relex/gotils/logger/priv"
+	"github.com/relex/gotils/promexporter/promext"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,13 +35,13 @@ type LogLevel string
 // Logger should always be passed by value
 type Logger struct {
 	entry           *logrus.Entry
-	counterForPanic prometheus.Counter
-	counterForFatal prometheus.Counter
-	counterForError prometheus.Counter
-	counterForWarn  prometheus.Counter
-	counterForInfo  prometheus.Counter
-	counterForDebug prometheus.Counter
-	counterForTrace prometheus.Counter
+	counterForPanic promext.RWCounter
+	counterForFatal promext.RWCounter
+	counterForError promext.RWCounter
+	counterForWarn  promext.RWCounter
+	counterForInfo  promext.RWCounter
+	counterForDebug promext.RWCounter
+	counterForTrace promext.RWCounter
 }
 
 // Fields type, used to pass to `WithFields`
@@ -73,10 +75,10 @@ var (
 		DebugLevel:    logrus.DebugLevel,
 		TraceLevel:    logrus.TraceLevel,
 	}
-	counterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+	counterVec = promext.NewLazyRWCounterVec(prometheus.CounterOpts{
 		Name: "logger_logs_total",
 		Help: "Numbers of logs including warnings",
-	}, []string{"component", "level"})
+	}, []string{priv.LabelComponent, "level"})
 
 	rootCounterForPanic = counterVec.WithLabelValues("(root)", string(PanicLevel))
 	rootCounterForFatal = counterVec.WithLabelValues("(root)", string(FatalLevel))
@@ -85,6 +87,8 @@ var (
 	rootCounterForInfo  = counterVec.WithLabelValues("(root)", string(InfoLevel))
 	rootCounterForDebug = counterVec.WithLabelValues("(root)", string(DebugLevel))
 	rootCounterForTrace = counterVec.WithLabelValues("(root)", string(TraceLevel))
+
+	root = wrapRootLogger(logrus.NewEntry(logrus.New()))
 )
 
 func init() {
@@ -94,18 +98,35 @@ func init() {
 	prometheus.MustRegister(counterVec)
 }
 
-// SetAutoFormat uses environment variable `LOG_COLOR` and terminal detection to configure appropriate log format
+// SetAutoFormat uses the environment variable `LOG_COLOR` and terminal detection to select console or text output format
+//
+// SetAutoFormat is the default choice and always invoked during initialization
 func SetAutoFormat() {
 	colorYN := strings.ToLower(os.Getenv("LOG_COLOR"))
 	switch colorYN {
 	case "1", "true", "y", "yes", "on":
-		priv.RootLogger.SetFormatter(priv.NewConsoleLogFormatter(true, priv.TextFormatter))
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(true, priv.TextFormatter))
 	case "0", "false", "n", "no", "off":
-		priv.RootLogger.SetFormatter(priv.TextFormatter)
+		root.entry.Logger.SetFormatter(priv.TextFormatter)
 	case "", "auto":
-		priv.RootLogger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
 	default:
-		Fatal("Invalid log color mode: \"" + string(colorYN) + "\"")
+		Fatal("Invalid log color mode: \"" + colorYN + "\"")
+	}
+}
+
+// SetAutoJSONFormat uses the environment variable `LOG_COLOR` and terminal detection to select console or JSON output format
+func SetAutoJSONFormat() {
+	colorYN := strings.ToLower(os.Getenv("LOG_COLOR"))
+	switch colorYN {
+	case "1", "true", "y", "yes", "on":
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(true, priv.JSONFormatter))
+	case "0", "false", "n", "no", "off":
+		root.entry.Logger.SetFormatter(priv.JSONFormatter)
+	case "", "auto":
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.JSONFormatter))
+	default:
+		Fatal("Invalid log color mode: \"" + colorYN + "\"")
 	}
 }
 
@@ -114,7 +135,7 @@ func SetAutoFormat() {
 //     {"timestamp":"2006/02/01T15:04:05.123+0200","level":"info","message":"A group of walrus emerges from theocean"}
 //
 func SetJSONFormat() {
-	priv.RootLogger.SetFormatter(priv.JSONFormatter)
+	root.entry.Logger.SetFormatter(priv.JSONFormatter)
 }
 
 // SetTextFormat sets the default text format. For example:
@@ -122,7 +143,7 @@ func SetJSONFormat() {
 //    time="2006/02/01T15:04:05.123+0200" level=debug msg="Started observing beach"
 //
 func SetTextFormat() {
-	priv.RootLogger.SetFormatter(priv.TextFormatter)
+	root.entry.Logger.SetFormatter(priv.TextFormatter)
 }
 
 // SetDefaultLevel sets the default logging level depending on environment variable "LOG_LEVEL"
@@ -141,12 +162,12 @@ func SetLogLevel(level LogLevel) {
 	if !exists {
 		Fatal("Invalid log level: \"" + string(level) + "\"")
 	}
-	priv.RootLogger.SetLevel(logrusLevel)
+	root.entry.Logger.SetLevel(logrusLevel)
 }
 
 // SetOutput configures the root logger to output into specified Writer
 func SetOutput(output io.Writer) {
-	priv.RootLogger.SetOutput(output)
+	root.entry.Logger.SetOutput(output)
 }
 
 // SetOutputFile configure the root logger to write into specified file
@@ -178,7 +199,7 @@ func SetUpstreamEndpoint(endpoint string) {
 	} else {
 		hook = priv.NewUpstreamTCPBufferedHook(endpoint)
 	}
-	priv.RootLogger.Hooks.Add(hook)
+	root.entry.Logger.Hooks.Add(hook)
 }
 
 func isLocalhost(host string) bool {
@@ -205,234 +226,263 @@ func Exit(code int) {
 	logrus.Exit(code)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Logging via the root logger
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/*****************************************************************************
+ * Logging via the root logger
+ *****************************************************************************/
 
 // Root gets the root logger that can be used to create sub-loggers.
+//
 // Calling global logging functions in the package is the same as calling methods in the root logger.
-// The function always returns a new wrapper of the current underlying RootLogger from priv package.
 func Root() Logger {
-	entry := logrus.NewEntry(priv.RootLogger)
-	return wrapRootLogger(entry)
+	return root
 }
 
 // Panic logs critical errors and exits the program
 func Panic(args ...interface{}) {
-	rootCounterForPanic.Inc()
-	priv.RootLogger.Panic(args...)
+	root.Panic(args...)
 }
 
 // Panicf logs critical errors with formatting and exits the program
 func Panicf(format string, args ...interface{}) {
-	rootCounterForPanic.Inc()
-	priv.RootLogger.Panicf(format, args...)
+	root.Panicf(format, args...)
 }
 
 // Fatal logs critical errros
 func Fatal(args ...interface{}) {
-	rootCounterForFatal.Inc()
-	priv.RootLogger.Fatal(args...)
+	root.Fatal(args...)
 }
 
 // Fatalf logs critical errros with formatting
 func Fatalf(format string, args ...interface{}) {
-	rootCounterForFatal.Inc()
-	priv.RootLogger.Fatalf(format, args...)
+	root.Fatalf(format, args...)
 }
 
 // Error logs errors via the root logger
 func Error(args ...interface{}) {
-	rootCounterForError.Inc()
-	priv.RootLogger.Error(args...)
+	root.Error(args...)
 }
 
 // Errorf logs errors with formatting
 func Errorf(format string, args ...interface{}) {
-	rootCounterForError.Inc()
-	priv.RootLogger.Errorf(format, args...)
+	root.Errorf(format, args...)
 }
 
 // Warn logs warnings
 func Warn(args ...interface{}) {
-	rootCounterForWarn.Inc()
-	priv.RootLogger.Warn(args...)
+	root.Warn(args...)
 }
 
 // Warnf logs warnings with formatting
 func Warnf(format string, args ...interface{}) {
-	rootCounterForWarn.Inc()
-	priv.RootLogger.Warnf(format, args...)
+	root.Warnf(format, args...)
 }
 
 // Info logs information
 func Info(args ...interface{}) {
-	rootCounterForInfo.Inc()
-	priv.RootLogger.Info(args...)
+	root.Info(args...)
 }
 
 // Infof logs information with formatting
 func Infof(format string, args ...interface{}) {
-	rootCounterForInfo.Inc()
-	priv.RootLogger.Infof(format, args...)
-}
-
-// Print logs without logging level
-func Print(args ...interface{}) {
-	priv.RootLogger.Print(args...)
-}
-
-// Printf logs without logging level with formatting
-func Printf(format string, args ...interface{}) {
-	priv.RootLogger.Printf(format, args...)
+	root.Infof(format, args...)
 }
 
 // Debug logs debugging information
 func Debug(args ...interface{}) {
-	rootCounterForDebug.Inc()
-	priv.RootLogger.Debug(args...)
+	root.Debug(args...)
 }
 
 // Debugf logs debugging information with formatting
 func Debugf(format string, args ...interface{}) {
-	rootCounterForDebug.Inc()
-	priv.RootLogger.Debugf(format, args...)
+	root.Debugf(format, args...)
 }
 
 // Trace logs tracing information
 func Trace(args ...interface{}) {
-	rootCounterForTrace.Inc()
-	priv.RootLogger.Trace(args...)
+	root.Trace(args...)
 }
 
 // Tracef logs tracing information with formatting
 func Tracef(format string, args ...interface{}) {
-	rootCounterForTrace.Inc()
-	priv.RootLogger.Tracef(format, args...)
+	root.Tracef(format, args...)
 }
 
 // WithFields creates a sub-logger from the root logger with specifid fields
 func WithFields(fields map[string]interface{}) Logger {
-	entry := priv.RootLogger.WithFields(fields)
-	if component, hasComponent := fields["component"]; hasComponent {
-		return wrapLoggerWithNewComponent(entry, component)
-	}
-	return wrapRootLogger(entry)
+	return root.WithFields(fields)
 }
 
 // WithField creates a sub-logger from the root logger with specifid field
 func WithField(key string, value interface{}) Logger {
-	entry := priv.RootLogger.WithField(key, value)
-	if key == "component" {
-		return wrapLoggerWithNewComponent(entry, value)
-	}
-	return wrapRootLogger(entry)
+	return root.WithField(key, value)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Logging or Structured logging via sublogger (Logrus entry)
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/*****************************************************************************
+ * Logging or Structured logging via sublogger (Logrus entry)
+ *****************************************************************************/
 
 // Panic logs critical errors and exits the program
 func (logger Logger) Panic(args ...interface{}) {
 	logger.counterForPanic.Inc()
-	logger.entry.Panic(args...)
+	getMergedEntryFromArgs(logger.entry, args).Panic(args...)
 }
 
 // Panicf logs critical errors with formatting and exits the program
 func (logger Logger) Panicf(format string, args ...interface{}) {
 	logger.counterForPanic.Inc()
-	logger.entry.Panicf(format, args...)
+	getMergedEntryFromArgs(logger.entry, args).Panicf(format, args...)
 }
 
 // Fatal logs critical errros
 func (logger Logger) Fatal(args ...interface{}) {
 	logger.counterForFatal.Inc()
-	logger.entry.Fatal(args...)
+	getMergedEntryFromArgs(logger.entry, args).Fatal(args...)
 }
 
 // Fatalf logs critical errros with formatting
 func (logger Logger) Fatalf(format string, args ...interface{}) {
 	logger.counterForFatal.Inc()
-	logger.entry.Fatalf(format, args...)
+	getMergedEntryFromArgs(logger.entry, args).Fatalf(format, args...)
 }
 
 // Error logs errors via the root logger
 func (logger Logger) Error(args ...interface{}) {
 	logger.counterForError.Inc()
-	logger.entry.Error(args...)
+	getMergedEntryFromArgs(logger.entry, args).Error(args...)
 }
 
 // Errorf logs errors with formatting
 func (logger Logger) Errorf(format string, args ...interface{}) {
 	logger.counterForError.Inc()
-	logger.entry.Errorf(format, args...)
+	getMergedEntryFromArgs(logger.entry, args).Errorf(format, args...)
 }
 
 // Warn logs warnings
 func (logger Logger) Warn(args ...interface{}) {
 	logger.counterForWarn.Inc()
-	logger.entry.Warn(args...)
+	getMergedEntryFromArgs(logger.entry, args).Warn(args...)
 }
 
 // Warnf logs warnings with formatting
 func (logger Logger) Warnf(format string, args ...interface{}) {
 	logger.counterForWarn.Inc()
-	logger.entry.Warnf(format, args...)
+	getMergedEntryFromArgs(logger.entry, args).Warnf(format, args...)
 }
 
 // Info logs information
 func (logger Logger) Info(args ...interface{}) {
 	logger.counterForInfo.Inc()
-	logger.entry.Info(args...)
+	getMergedEntryFromArgs(logger.entry, args).Info(args...)
 }
 
 // Infof logs information with formatting
 func (logger Logger) Infof(format string, args ...interface{}) {
 	logger.counterForInfo.Inc()
-	logger.entry.Infof(format, args...)
+	getMergedEntryFromArgs(logger.entry, args).Infof(format, args...)
 }
 
 // Debug logs debugging information
 func (logger Logger) Debug(args ...interface{}) {
 	logger.counterForDebug.Inc()
-	logger.entry.Debug(args...)
+	getMergedEntryFromArgs(logger.entry, args).Debug(args...)
 }
 
 // Debugf logs debugging information with formatting
 func (logger Logger) Debugf(format string, args ...interface{}) {
 	logger.counterForDebug.Inc()
-	logger.entry.Debugf(format, args...)
+	getMergedEntryFromArgs(logger.entry, args).Debugf(format, args...)
 }
 
 // Trace logs tracing information
 func (logger Logger) Trace(args ...interface{}) {
 	logger.counterForTrace.Inc()
-	logger.entry.Trace(args...)
+	getMergedEntryFromArgs(logger.entry, args).Trace(args...)
 }
 
 // Tracef logs tracing information with formatting
 func (logger Logger) Tracef(format string, args ...interface{}) {
 	logger.counterForTrace.Inc()
-	logger.entry.Tracef(format, args...)
+	getMergedEntryFromArgs(logger.entry, args).Tracef(format, args...)
 }
 
-// WithFields creates a sub-logger with specifid fields
-func (logger Logger) WithFields(fields map[string]interface{}) Logger {
-	entry := logger.entry.WithFields(fields)
-	if component, hasComponent := fields["component"]; hasComponent {
-		return wrapLoggerWithNewComponent(entry, component)
+// Sprint prints the given arguments with fields in this logger to a string
+//
+// e.g. "[MyClass] name=Foo status=200 My message"
+func (logger Logger) Sprint(args ...interface{}) string {
+	strList := buildSprintPrefixes(getMergedEntryFromArgs(logger.entry, args).Data)
+
+	if s := fmt.Sprint(args...); len(s) > 0 {
+		strList = append(strList, s)
 	}
-	return wrapLogger(entry, logger)
+
+	return strings.Join(strList, " ")
+}
+
+// Sprintf formats the given arguments with fields in this logger to a string
+//
+// e.g. "[MyClass] name=Foo status=200  Hi '<someone>'"
+func (logger Logger) Sprintf(format string, args ...interface{}) string {
+	strList := buildSprintPrefixes(getMergedEntryFromArgs(logger.entry, args).Data)
+
+	if s := fmt.Sprintf(format, args...); len(s) > 0 {
+		strList = append(strList, s)
+	}
+
+	return strings.Join(strList, " ")
+}
+
+// Eprint prints the given arguments with fields in this logger to a StructuredError
+//
+// Fields in the logger are copied into StructuredError for later logging
+func (logger Logger) Eprint(args ...interface{}) error {
+	return NewStructuredError(logger.entry.Data, errors.New(fmt.Sprint(args...)))
+}
+
+// Eprintf formats the given arguments with fields in this logger to a StructuredError
+//
+// Fields in the logger are copied into StructuredError for later logging
+func (logger Logger) Eprintf(format string, args ...interface{}) error {
+	return NewStructuredError(logger.entry.Data, fmt.Errorf(format, args...))
+}
+
+// Ewrap wraps the given error inside a newly-created StructuredError with context information
+//
+// Fields in the logger are copied into StructuredError for later logging
+func (logger Logger) Ewrap(innerError error) error {
+	return NewStructuredError(logger.entry.Data, innerError)
 }
 
 // WithField creates a sub-logger with specifid field
 func (logger Logger) WithField(key string, value interface{}) Logger {
 	entry := logger.entry.WithField(key, value)
-	if key == "component" {
+	if key == priv.LabelComponent {
 		return wrapLoggerWithNewComponent(entry, value)
 	}
 	return wrapLogger(entry, logger)
+}
+
+// WithFields creates a sub-logger with specifid fields
+func (logger Logger) WithFields(fields map[string]interface{}) Logger {
+	entry := logger.entry.WithFields(fields)
+	if component, hasComponent := fields[priv.LabelComponent]; hasComponent {
+		return wrapLoggerWithNewComponent(entry, component)
+	}
+	return wrapLogger(entry, logger)
+}
+
+func buildSprintPrefixes(fields map[string]interface{}) []string {
+	prefixList := make([]string, 0, 3)
+
+	comp, hasComp := fields[priv.LabelComponent]
+	if hasComp {
+		prefixList = append(prefixList, fmt.Sprintf("[%v]", comp))
+	}
+
+	if dataStr := priv.FormatFields(fields); len(dataStr) > 0 {
+		prefixList = append(prefixList, dataStr)
+	}
+
+	return prefixList
 }
 
 func wrapRootLogger(entry *logrus.Entry) Logger {

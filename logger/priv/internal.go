@@ -41,8 +41,4 @@ var (
 		FullTimestamp:   true,
 		DisableColors:   true,
 	}
-
-	// RootLogger exposes the internal logrus root logger
-	// Reassignment of this field only affects subsequent calls to global logging functions (e.g. .Info and .Root), not existing loggers.
-	RootLogger = logrus.New()
 )

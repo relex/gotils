@@ -21,18 +21,17 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
-const (
-	labelComponent = "component"
-)
+// LabelComponent defines the special "component" field
+const LabelComponent = "component"
 
 // ConsoleLogFormatter is colored output format for console / terminals
 // It detects the type of output writers automatically and only enables if the type is terminal
 type ConsoleLogFormatter struct {
-	ForceColor        bool                  // Force enable colored mode even for non-terminal log writer
-	FallbackFormatter *logrus.TextFormatter // Fallback formatter to use for non-terminal. If nil, use built-in fallback format (human readable, not for field parsing)
+	ForceColor        bool             // Force enable colored mode even for non-terminal log writer
+	FallbackFormatter logrus.Formatter // Fallback formatter to use for non-terminal. If nil, use built-in fallback format (human readable, not for field parsing)
 	cachedTestResult  *terminalTestResult
 }
 
@@ -76,7 +75,7 @@ var (
 )
 
 // NewConsoleLogFormatter creates a new ConsoleLogFormatter
-func NewConsoleLogFormatter(forceColor bool, fallbackFormatter *logrus.TextFormatter) *ConsoleLogFormatter {
+func NewConsoleLogFormatter(forceColor bool, fallbackFormatter logrus.Formatter) *ConsoleLogFormatter {
 	return &ConsoleLogFormatter{
 		ForceColor:        forceColor,
 		FallbackFormatter: fallbackFormatter,
@@ -95,11 +94,11 @@ func (f *ConsoleLogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			return fallback.Format(entry)
 		}
 		compStr := ""
-		if comp, ok := entry.Data[labelComponent]; ok {
+		if comp, ok := entry.Data[LabelComponent]; ok {
 			compStr = fmt.Sprintf(" [%v]", comp)
 		}
 		// ex: 2020-07-10T17:44:36.286+03:00 INFO  [Engine] starting for /tmp/fluent-bit-forwarder-test-56632/test dirname=test
-		tail := formatFields(entry.Data)
+		tail := FormatFields(entry.Data)
 		if tail != "" {
 			tail = " " + tail
 		}
@@ -111,8 +110,8 @@ func (f *ConsoleLogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		levelColor = ansiColorCyan
 	}
 	strHead := formatAnsi(fmt.Sprintf("%-12s %-5s", entry.Time.Format(shortTimestamp), levelStr), levelColor, ansiBold)
-	if comp, ok := entry.Data[labelComponent]; ok {
-		strHead = strHead + " " + formatAnsi(fmt.Sprintf("%v", comp), levelColor, ansiUnderline)
+	if comp, ok := entry.Data[LabelComponent]; ok {
+		strHead = strHead + " " + formatAnsi(fmt.Sprint(comp), levelColor, ansiUnderline)
 	}
 	strBody := formatAnsi(entry.Message, levelColor)
 	strTail := ""
@@ -148,17 +147,18 @@ func IsTerminalWriter(writer io.Writer) bool {
 	default:
 		return false
 	}
-	return terminal.IsTerminal(fd)
+	return term.IsTerminal(fd)
 }
 
-func formatFields(fields logrus.Fields) string {
+// FormatFields formats all but "component" fields into string, e.g. "name=Foo type=Bar status=..."
+func FormatFields(fields logrus.Fields) string {
 	keyStrings := getSortedFieldKeys(fields)
 	fieldStrings := make([]string, 0, len(fields))
 	for _, key := range keyStrings {
-		if key == labelComponent {
+		if key == LabelComponent {
 			continue
 		}
-		v := fmt.Sprintf("%v", fields[key])
+		v := fmt.Sprint(fields[key])
 		if strings.Contains(v, " ") {
 			fieldStrings = append(fieldStrings, fmt.Sprintf("%s=\"%s\"", key, fieldsFormatReplacer.Replace(v)))
 		} else {
@@ -172,12 +172,12 @@ func formatFieldsColored(fields logrus.Fields, color string) string {
 	keyStrings := getSortedFieldKeys(fields)
 	fieldStrings := make([]string, 0, len(fields))
 	for _, key := range keyStrings {
-		if key == labelComponent {
+		if key == LabelComponent {
 			continue
 		}
 		val := fields[key]
 		fieldStrings = append(fieldStrings, formatAnsi(fmt.Sprintf("%s=", key), color, ansiItalic, ansiDimmed)+
-			formatAnsi(fmt.Sprintf("%v", val), color, ansiItalic))
+			formatAnsi(fmt.Sprint(val), color, ansiItalic))
 	}
 	return strings.Join(fieldStrings, " ")
 }

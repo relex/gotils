@@ -11,27 +11,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promexporter
+package io
 
 import (
-	"net/http"
-	"time"
+	"io/ioutil"
+	"os"
+	"strconv"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/relex/gotils/logger"
 )
 
-const pushMetricsTimeout = 20 * time.Second
-
-// PushMetrics pushes all metrics in the default registry to the target URL
-//
-// The URL should contain no path for the official pushgateway
-func PushMetrics(url string, job string) {
-	client := &http.Client{}
-	client.Timeout = pushMetricsTimeout // default is no timeout
-	err := push.New(url, job).Gatherer(prometheus.DefaultGatherer).Client(client).Push()
-	if err != nil {
-		logger.Error("failed to push metrics: ", err)
+// WriteFileAtomically writes file contents to specified path atomically
+func WriteFileAtomically(path string, contents []byte) {
+	tmpFile := path + "." + strconv.Itoa(os.Getpid())
+	if err := ioutil.WriteFile(tmpFile, contents, 0644); err != nil {
+		logger.Fatalf("failed to write file: %v", err)
+	}
+	if err := os.Rename(tmpFile, path); err != nil {
+		logger.Fatalf("failed to rename file: %v", err)
 	}
 }

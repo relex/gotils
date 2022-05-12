@@ -40,7 +40,7 @@ lint:
 
 .PHONY: clean
 clean:
-	rm -f BUILD/*
+	rm -rf BUILD/*
 	go clean
 
 .PHONY: upgrade

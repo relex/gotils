@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promexporter
+package promext
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
-	"github.com/relex/gotils/logger"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -99,11 +99,15 @@ func (g *rwGauge) Write(out *dto.Metric) error {
 }
 
 // Describe implements prometheus.Collector.
+//
+// The function is never called when the gauge is under a vector
 func (g *rwGauge) Describe(ch chan<- *prometheus.Desc) {
 	ch <- g.Desc()
 }
 
 // Collect implements prometheus.Collector.
+//
+// The function is never called when the gauge is under a vector
 func (g *rwGauge) Collect(ch chan<- prometheus.Metric) {
 	ch <- g
 }
@@ -128,7 +132,7 @@ func NewRWGaugeVec(opts prometheus.GaugeOpts, labelNames []string) *RWGaugeVec {
 	return &RWGaugeVec{
 		MetricVec: prometheus.NewMetricVec(desc, func(lvs ...string) prometheus.Metric {
 			if len(lvs) != len(labelNames) {
-				logger.Panic(makeInconsistentCardinalityError(fqName, labelNames, lvs))
+				panic(makeInconsistentCardinalityError(fqName, labelNames, lvs))
 			}
 			result := &rwGauge{
 				valBits:    0,
@@ -146,7 +150,7 @@ func NewRWGaugeVec(opts prometheus.GaugeOpts, labelNames []string) *RWGaugeVec {
 func (v *RWGaugeVec) WithLabelValues(lvs ...string) RWGauge {
 	g, err := v.GetMetricWithLabelValues(lvs...)
 	if err != nil {
-		logger.Panicf("RWGaugeVec %s{%v}: %v", v.fqName, lvs, err)
+		panic(fmt.Sprintf("RWGaugeVec %s{%v}: %v", v.fqName, lvs, err))
 	}
 	return g
 }
@@ -165,7 +169,7 @@ func (v *RWGaugeVec) GetMetricWithLabelValues(lvs ...string) (RWGauge, error) {
 func (v *RWGaugeVec) MustCurryWith(labels prometheus.Labels) *RWGaugeVec {
 	vec, err := v.MetricVec.CurryWith(labels)
 	if err != nil {
-		logger.Panicf("RWGaugeVec %s{%v}: %v", v.fqName, labels, err)
+		panic(fmt.Sprintf("RWGaugeVec %s{%v}: %v", v.fqName, labels, err))
 	}
 	return &RWGaugeVec{vec, v.fqName}
 }
