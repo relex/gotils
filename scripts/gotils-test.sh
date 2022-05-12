@@ -27,6 +27,9 @@ test -d BUILD || { echo "missing BUILD dir"; exit 1; }
 CGO_ENABLED=$CGO_ENABLED LOG_LEVEL=${LOG_LEVEL:-warn} LOG_COLOR=${LOG_COLOR:-Y} go test -timeout ${TEST_TIMEOUT:-10s} -coverprofile=BUILD/test-coverage.out -v ./... 2>&1 | tee >(go-junit-report > BUILD/test-report.xml)
 TEST_RESULT=$?
 
+go install github.com/boumenot/gocover-cobertura@v1.2
+gocover-cobertura < BUILD/test-coverage.out > BUILD/cobertura.xml
+
 go tool cover -html=BUILD/test-coverage.out -o BUILD/test-coverage.html
 go tool cover -func=BUILD/test-coverage.out | grep total | awk '{print "TotalCodeCoverage:",$3}'
 
