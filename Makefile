@@ -28,6 +28,7 @@ install:
 
 .PHONY: uninstall
 uninstall:
+	rm -f ${GOPATH}/bin/{genny,exhaustivestruct,go-junit-report,scopelint,golint,shadow,staticcheck,golangci-lint}
 	rm -f ${GOPATH}/bin/gotils-*.sh
 	rm -fr ${GOPATH}/opt/gotils
 
