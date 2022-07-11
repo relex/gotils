@@ -17,9 +17,7 @@ help:
 install:
 	mkdir -p ${GOPATH}/bin
 	install scripts/gotils-prereq.sh ${GOPATH}/bin/
-	install scripts/gotils-build.sh ${GOPATH}/bin/
 	install scripts/gotils-lint.sh ${GOPATH}/bin/
-	install scripts/gotils-test.sh ${GOPATH}/bin/
 	mkdir -p ${GOPATH}/opt/gotils
 	cp -a templates ${GOPATH}/opt/gotils/
 	cp -a Common.mk ${GOPATH}/opt/gotils/
@@ -28,7 +26,7 @@ install:
 
 .PHONY: uninstall
 uninstall:
-	rm -f ${GOPATH}/bin/{genny,exhaustivestruct,go-junit-report,scopelint,golint,shadow,staticcheck,golangci-lint}
+	rm -f ${GOPATH}/bin/{exhaustivestruct,scopelint,shadow,staticcheck,golangci-lint}
 	rm -f ${GOPATH}/bin/gotils-*.sh
 	rm -fr ${GOPATH}/opt/gotils
 

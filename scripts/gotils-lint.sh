@@ -19,75 +19,37 @@ set -o pipefail
 #   LINT_EXHAUSTIVESTRUCT: y/1/t to make sure all appropriate fields are assigned in construction
 
 GOPATH=$(go env GOPATH) || exit 1
-test -d BUILD || { echo "missing BUILD dir"; exit 1; }
-
-truncate -s0 BUILD/lint-codequality.dump
-
-collect_issues() {
-    local ICATEGORY=$1
-    local ISEVERITY=$2 # severity: info, minor, major, critical, or blocker
-    cat | grep '^[A-Za-z0-9_./-]\+\.go:[0-9]\+:' \
-    | perl -ne 'use Digest::MD5 qw(md5_hex); /^(.+?):(.+?):(.+?): *(.*)$/ && print "'$ICATEGORY',|'$ISEVERITY',|$1,|$2,|$3,|$4,|", md5_hex("$1$4"), "\n"' \
-    >> BUILD/lint-codequality.dump
-}
-
-make_report() {
-    cat BUILD/lint-codequality.dump | jq -Rsn '
-[
-inputs
-    | . / "\n"
-    | (.[] | select(length > 0) | . / ",|") as $input
-    | {
-        "description": ("[" + $input[0] + "] " + $input[5]),
-        "fingerprint": $input[6],
-        "severity": $input[1],
-        "location": {
-          "path": $input[2],
-          "lines": {
-            "begin": $input[3]|tonumber
-          }
-        }
-      }
-] | sort_by(.location.path)' \
-    > BUILD/lint-codequality.json
-}
-trap make_report EXIT
 
 PWD=$(pwd)
 
-if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* ]]; then
+if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* || -f .exhaustivestruct ]]; then
     echo "EXHAUSTIVESTRUCT:"
-    exhaustivestruct ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g" | tee >(collect_issues exhaustivestruct minor)
+    exhaustivestruct ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g"
     echo "------------------------------------------------------------"
 fi
 
 echo "GO VET:"
-go vet ./... 2>&1 | tee >(collect_issues go-vet info)
-echo "------------------------------------------------------------"
-
-echo "GO LINT:"
-golint ./... 2>&1 | tee >(collect_issues go-lint info)
+go vet ./... 2>&1
 echo "------------------------------------------------------------"
 
 echo "SCOPELINT:"
-scopelint ./... 2>&1 | tee >(collect_issues scopelint major)
+scopelint ./... 2>&1
 echo "------------------------------------------------------------"
 
 echo "SHADOW:"
-shadow ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g" | tee >(collect_issues shadow major)
+shadow ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g"
 echo "------------------------------------------------------------"
 
 echo "STATICCHECK:"
-staticcheck ./... 2>&1 | tee >(collect_issues staticcheck info)
+staticcheck ./... 2>&1
 echo "------------------------------------------------------------"
 
 if [[ -f ".golangci.yml" ]]; then
     echo "GOLANGCI-LINT:"
-    golangci-lint run 2>&1 | tee >(collect_issues golangci-lint info)
+    golangci-lint run 2>&1
 else
     echo "GOLANGCI-LINT: (default config)"
-    golangci-lint run -c ${GOPATH}/opt/gotils/templates/.golangci.yml 2>&1 | tee >(collect_issues golangci-lint info)
+    golangci-lint run -c ${GOPATH}/opt/gotils/templates/.golangci.yml 2>&1
 fi
 
-# return error if there is any issue
-test ! -s BUILD/lint-codequality.dump
+exit 0

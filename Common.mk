@@ -15,10 +15,14 @@ SHELL := /bin/bash
 SOURCES := $(shell find . -name '*.go')
 SOURCES_NONTEST := $(shell find . -name '*.go' -not -name '*_test.go')
 
+# .PHONY: build
+# build:
+# 	CGO_ENABLED=$${CGO_ENABLED:-0} GO_LDFLAGS="-X main.version=$(AUTO_BUILD_VERSION)" go build
+
 # test is the first/default target for "make" if parent project doesn't define any
 .PHONY: test
 test:
-	gotils-test.sh
+	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -v ./...
 
 # the rest of targets below are sorted by workflow
 
