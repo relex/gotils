@@ -109,7 +109,6 @@ LOG_LEVEL=debug TEST_TIMEOUT=60s make test
 
 - exhaustivestruct: check all struct fields are explicitly assigned in construction; set env `LINT_EXHAUSTIVESTRUCT=Y` to enable
 - go vet
-- golint
 - scopelint: check mis-used pointers to for-loop variables
 - shadow: check shadowed variables
 - staticcheck: depends on `PROJECT_DIR/staticcheck.conf`, see [the sample config](templates/staticcheck.conf) for explanations
