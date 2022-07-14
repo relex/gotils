@@ -15,7 +15,7 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.8.0
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	google.golang.org/protobuf v1.28.0
 )
