@@ -14,6 +14,14 @@ run:
   tests: true # whether to include test files
 
 
+output:
+  format: tab
+  print-issued-lines: true
+  print-linter-name: true
+  unique-by-line: true
+  sort-results: true
+
+
 linters-settings:
   cyclop:
     # The maximal code complexity to report. Default: 10
