@@ -15,34 +15,9 @@
 
 set -o pipefail
 
-# Environment variables:
-#   LINT_EXHAUSTIVESTRUCT: y/1/t to make sure all appropriate fields are assigned in construction
-
 GOPATH=$(go env GOPATH) || exit 1
 
 PWD=$(pwd)
-
-if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* || -f .exhaustivestruct ]]; then
-    echo "EXHAUSTIVESTRUCT:"
-    exhaustivestruct ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g"
-    echo "------------------------------------------------------------"
-fi
-
-echo "GO VET:"
-go vet ./... 2>&1
-echo "------------------------------------------------------------"
-
-echo "SCOPELINT:"
-scopelint ./... 2>&1
-echo "------------------------------------------------------------"
-
-echo "SHADOW:"
-shadow ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g"
-echo "------------------------------------------------------------"
-
-echo "STATICCHECK:"
-staticcheck ./... 2>&1
-echo "------------------------------------------------------------"
 
 if [[ -f ".golangci.yml" ]]; then
     echo "GOLANGCI-LINT:"

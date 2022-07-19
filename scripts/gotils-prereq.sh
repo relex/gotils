@@ -17,10 +17,6 @@ GOPATH=$(go env GOPATH) || exit 1
 
 read -r -d '' DEPS << EndOfDef
 github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
-github.com/jiping-s/exhaustivestruct/cmd/exhaustivestruct@v1.1.1
-github.com/kyoh86/scopelint@latest
-golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow@latest
-honnef.co/go/tools/cmd/staticcheck@2022.1.2
 EndOfDef
 
 export GO111MODULE=on

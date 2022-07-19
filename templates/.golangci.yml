@@ -1,29 +1,159 @@
 run:
-  skip-files:
-    - ".*\\.tpl\\.go$"
+  go: '1.18'
+  concurrency: 4
+  timeout: 2m
+  issues-exit-code: 1
+
+  # default is true. Enables skipping of directories:
+  #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
+  skip-dirs-use-default: true
+  skip-dirs:
+    - ".*\\.tpl"
+    - "test"
+  skip-files: [".*_test.go$"]
+  tests: true # whether to include test files
+
 
 linters-settings:
+  cyclop:
+    # The maximal code complexity to report. Default: 10
+    max-complexity: 20
+    # If maximal average package complexity is higher than 0.0 (float) the check is enabled. Default: 0.5
+    package-average: 0.5
+    skip-tests: true
+
+  decorder:
+    # Required order of `type`, `const`, `var` and `func` declarations inside a file.
+    # Default: types before constants before variables before functions.
+    dec-order:
+      - type
+      - const
+      - var
+      - func
+    disable-dec-order-check: false
+    disable-init-func-first-check: false
+    # If true, multiple global `type`, `const` and `var` declarations are allowed.
+    disable-dec-num-check: false
+
+  errchkjson:
+    check-error-free-encoding: true
+    report-no-exported: true
+
+  exhaustruct:
+    exclude:
+      - '.*Config$'
+      - '.*Settings$'
+      - '.*prometheus\..*'
+
   funlen:
     lines: 150
     statements: 105
 
+  gocognit:
+    min-complexity: 30 # default: 30     
+
+  lll:
+    line-length: 150 # default: 120 
+
+
 linters:
+  # disable-all: true
   enable:
-    - bodyclose
-    # - dupl # USELESS until code templating can be replaced by generics (Go v2)
+    # Enabled by default
+    - deadcode
+    - errcheck # needs config
+    - gosimple
+    - govet # needs extensive config
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+
+    # Additional configurable linters
+    - bidichk
+    - contextcheck
+    # - cyclop # // checks cyclomatic complexity; breaks things in slog-agent, where complex code is inlined
+    # - decorder # // checks the order and number of declaration; this one is annoying 
+    # - depguard # // creates a whitelist/blacklist of packages that can be imported; we don't have these lists (yet)
+    - dogsled
+    - dupl
+    - errchkjson
     - errorlint
     - exhaustive
-    # - exhaustivestruct # OUTDATED
-    - exportloopref
-    - funlen
+    # - exhaustruct # // checks if all the fields of a struct were initialized; annoying
+    - forbidigo
     - gci
+    - gocognit
     - goconst
-    - gocritic
-    - gocyclo
-    - goprintffuncname
-    # - gosec # CANNOT use until gosec options can be configured here: https://github.com/golangci/golangci-lint/issues/177
-    # - interfacer # WRONG warnings and deprecated by the author https://github.com/golangci/golangci-lint/issues/1689
+    # - gocritic # // a huge and opinionated linter; needs refactoring and extensive config
+    # - gocyclo # // same as cyclop
+    # - godot # // checks that comments end with a period; annoying
+    # - godox # // checks for TODO and similar stuff; annoying
+    - gofmt
+    - gofumpt # // a stricter gofmt; it's a good one, but requires fixing, disabling for now
+    # - goheader # // we don't use license headers
+    - goimports
+    # - gomnd # // detects magic numbers; requires a ton of fixing
+    # - gomoddirectives # // don't really need to ban go.mod directives
+    # - gomodguard # // like depguars, but more flexible; don't need it for now
+    # - gosec # // checks for security issues; requires investigating
+    # - grouper # // analyzes import/type groups; not sure if we need it
+    - ifshort 
+    # - importas # // enforces import aliasing rules; requires configuration
+    # - ireturn # // this is a good one, it disallows returing interfaces; requires refactoring, need to enable it later
+    # - lll # // warns on long lines; requires refactoring
+    - maintidx
+    - makezero 
+    - misspell
+    - nakedret
+    # - nestif # // warns on many nested ifs; needs refactoring
+    # - nlreturn # // requires a newline before returns; needs refactoring
+    - nolintlint
+    # - nonamedreturns # // warns on named returns; requires refactoring
+    - paralleltest
     - prealloc
-    # - scopelint # OUTDATED
-    - unconvert
+    # - predeclared # // finds vars with disallowed names; requires refactoring
+    - promlinter
+    # - revive # // replaces golint, very configurable; requires refactoring
+    - rowserrcheck
+    - stylecheck
+    # - tagliatelle # // enforce snake/kebab/etc rules on struct tags; not using it now
+    - tenv
+    - testpackage 
+    - thelper
     - unparam
+    # - varnamelen # // reports variables with too short names for their scope; requires refactoring
+    - whitespace
+    # - wrapcheck # // checks whether the errors are wrapped; requires a ton of refactoring
+    # - wsl # // forces to use whitelines where appropriate; requires refactoring
+
+    # Additional non-configurable linters
+    - asciicheck
+    - bodyclose
+    - containedctx
+    - durationcheck
+    - errname
+    - execinquery
+    - exportloopref
+    # - forcetypeassert # // warns on unchecked type asserts; requires fixing
+    # - gochecknoglobals # // warns when it finds globals; slog-agent has a ton of them, disabling for now
+    # - gochecknoinits # // warns when it finds init(); we use them, so disabling for now
+    # - goerr113 # // makes you use static errors, it's a good one, but requires a lot of fixing of slog-agent
+    - goprintffuncname
+    - nilerr
+    - noctx
+    # - nosnakecase # // forbids snake case in variables; requires linter v1.47 and refactoring
+    - nosprintfhostport
+    - sqlclosecheck
+    - tparallel
+    - unconvert
+    - wastedassign
+
+  disable:
+    - exhaustivestruct # deprecated
+    - golint # deprecated, replaced with revive
+    - interfacer # deprecated
+    - maligned # deprecated, replaced with govet 'fieldalignment'
+    - scopelint # deprecated, replaced with exportloopref
