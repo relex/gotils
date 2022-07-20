@@ -196,6 +196,7 @@ linters:
     - gochecknoinits    # tells you not to use init() functions
     - goerr113          # makes you use static errors, it's a good one, but very annoying
     - nosprintfhostport # warns when you build a url with sprintf
+    - nosnakecase       # forbids snake case in variables; may false trigger on stuff like `unix.O_RDONLY`
 
   disable:
     # deprecated
@@ -220,7 +221,6 @@ linters:
     - gomodguard        # like depguard, but more flexible; don't need it for now
     - grouper           # analyzes import/type groups; not sure if we need it
     - importas          # enforces import aliasing rules; requires configuration, not sure if needed
-    - nosnakecase       # forbids snake case in variables; many false triggers on stuff like `unix.O_RDONLY`
     - tagliatelle       # enforce snake/kebab/etc rules on struct tags; needs config, not sure if needed
     - testpackage       # makes you use a separate *_test package for tests
 
