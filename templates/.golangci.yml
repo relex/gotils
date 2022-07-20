@@ -8,7 +8,6 @@ run:
   #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
   skip-dirs-use-default: true
   skip-dirs:
-    - ".*\\.tpl"
     - "test"
   skip-files: [".*_test.go$"]
   tests: true # whether to include test files
@@ -24,15 +23,11 @@ output:
 
 linters-settings:
   cyclop:
-    # The maximal code complexity to report. Default: 10
-    max-complexity: 20
-    # If maximal average package complexity is higher than 0.0 (float) the check is enabled. Default: 0.5
-    package-average: 0.5
+    max-complexity: 20 # Default: 10
+    package-average: 0.5 # Default: 0.5
     skip-tests: true
 
   decorder:
-    # Required order of `type`, `const`, `var` and `func` declarations inside a file.
-    # Default: types before constants before variables before functions.
     dec-order:
       - type
       - const
@@ -40,8 +35,11 @@ linters-settings:
       - func
     disable-dec-order-check: false
     disable-init-func-first-check: false
-    # If true, multiple global `type`, `const` and `var` declarations are allowed.
-    disable-dec-num-check: false
+    disable-dec-num-check: true # true allows multiple var/type/etc declarations
+
+  errcheck:
+    check-type-assertions: false # requires fixing
+    check-blank: true
 
   errchkjson:
     check-error-free-encoding: true
@@ -60,8 +58,49 @@ linters-settings:
   gocognit:
     min-complexity: 30 # default: 30     
 
+  govet:
+    check-shadowing: true
+    enable-all: true
+
   lll:
     line-length: 150 # default: 120 
+
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: false
+    require-explanation: false
+    require-specific: false
+
+  revive:
+    enable-all-rules: true
+    ignore-generated-header: false
+    severity: error
+    rules:
+      # disabled rules which are mostly duplicated by other linters
+      - name: banned-characters
+        disabled: true
+      - name: cyclomatic
+        disabled: true
+      - name: cognitive-complexity
+        disabled: true
+      - name: file-header
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: line-length-limit
+        disabled: true
+      - name: max-public-structs
+        disabled: true
+
+      # rules with arguments
+      - name: argument-limit
+        severity: warning
+        disabled: false
+        arguments: [4]
+      - name: function-result-limit
+        severity: warning
+        disabled: false
+        arguments: [2]
 
 
 linters:
@@ -71,9 +110,9 @@ linters:
   enable:
     # Enabled by default
     - deadcode
-    - errcheck # needs config
+    - errcheck
     - gosimple
-    - govet # needs extensive config
+    - govet
     - ineffassign
     - staticcheck
     - structcheck
@@ -82,62 +121,51 @@ linters:
     - varcheck
 
     # Additional configurable linters
+    - asasalint
     - bidichk
     - contextcheck
-    # - cyclop # // checks cyclomatic complexity; breaks things in slog-agent, where complex code is inlined
-    # - decorder # // checks the order and number of declaration; this one is annoying 
-    # - depguard # // creates a whitelist/blacklist of packages that can be imported; we don't have these lists (yet)
+    - cyclop # checks cyclomatic complexity; breaks things in slog-agent, where complex code is inlined
+    - decorder # checks the order and number of declaration; requires fixing 
     - dogsled
     - dupl
     - errchkjson
     - errorlint
     - exhaustive
-    # - exhaustruct # // checks if all the fields of a struct were initialized; annoying
     - forbidigo
     - gci
     - gocognit
     - goconst
-    # - gocritic # // a huge and opinionated linter; needs refactoring and extensive config
-    # - gocyclo # // same as cyclop
-    # - godot # // checks that comments end with a period; annoying
-    # - godox # // checks for TODO and similar stuff; annoying
-    - gofmt
-    - gofumpt # // a stricter gofmt; it's a good one, but requires fixing, disabling for now
-    # - goheader # // we don't use license headers
+    - gocritic # a huge and opinionated linter; needs refactoring and extensive config
+    - gofumpt # a stricter gofmt; it's a good one, but requires fixing, disabling for now
     - goimports
-    # - gomnd # // detects magic numbers; requires a ton of fixing
-    # - gomoddirectives # // don't really need to ban go.mod directives
-    # - gomodguard # // like depguars, but more flexible; don't need it for now
-    # - gosec # // checks for security issues; requires investigating
-    # - grouper # // analyzes import/type groups; not sure if we need it
+    - gomnd # detects magic numbers; requires a ton of fixing
+    - gosec # checks for security issues; requires investigating
     - ifshort 
-    # - importas # // enforces import aliasing rules; requires configuration
-    # - ireturn # // this is a good one, it disallows returing interfaces; requires refactoring, need to enable it later
-    # - lll # // warns on long lines; requires refactoring
+    - ireturn # this is a good one, it disallows returing interfaces; requires refactoring, need to enable it later
+    - lll # warns on long lines; requires refactoring
     - maintidx
     - makezero 
     - misspell
     - nakedret
-    # - nestif # // warns on many nested ifs; needs refactoring
-    # - nlreturn # // requires a newline before returns; needs refactoring
+    - nestif # warns on many nested ifs; needs refactoring
+    - nlreturn # requires a newline before returns; needs refactoring
     - nolintlint
-    # - nonamedreturns # // warns on named returns; requires refactoring
+    - nonamedreturns # warns on named returns; requires refactoring
     - paralleltest
     - prealloc
-    # - predeclared # // finds vars with disallowed names; requires refactoring
+    - predeclared # finds vars with disallowed names; requires refactoring
     - promlinter
-    # - revive # // replaces golint, very configurable; requires refactoring
+    - revive # replaces golint, very configurable; requires refactoring
     - rowserrcheck
     - stylecheck
-    # - tagliatelle # // enforce snake/kebab/etc rules on struct tags; not using it now
     - tenv
     - testpackage 
     - thelper
     - unparam
-    # - varnamelen # // reports variables with too short names for their scope; requires refactoring
+    - varnamelen # reports variables with too short names for their scope; requires refactoring
     - whitespace
-    # - wrapcheck # // checks whether the errors are wrapped; requires a ton of refactoring
-    # - wsl # // forces to use whitelines where appropriate; requires refactoring
+    - wrapcheck # checks whether the errors are wrapped; requires a ton of refactoring
+    - wsl # forces to use whitelines where appropriate; requires refactoring
 
     # Additional non-configurable linters
     - asciicheck
@@ -147,14 +175,13 @@ linters:
     - errname
     - execinquery
     - exportloopref
-    # - forcetypeassert # // warns on unchecked type asserts; requires fixing
-    # - gochecknoglobals # // warns when it finds globals; slog-agent has a ton of them, disabling for now
-    # - gochecknoinits # // warns when it finds init(); we use them, so disabling for now
-    # - goerr113 # // makes you use static errors, it's a good one, but requires a lot of fixing of slog-agent
+    - forcetypeassert # warns on unchecked type asserts; duplicates errcheck.check-type-assertions and requires fixing
+    - gochecknoglobals # warns when it finds globals; slog-agent has a ton of them, disabling for now
+    - gochecknoinits # warns when it finds init(); we use them, so disabling for now
+    - goerr113 # makes you use static errors, it's a good one, but requires a lot of fixing of slog-agent
     - goprintffuncname
     - nilerr
     - noctx
-    # - nosnakecase # // forbids snake case in variables; requires linter v1.47 and refactoring
     - nosprintfhostport
     - sqlclosecheck
     - tparallel
@@ -162,8 +189,22 @@ linters:
     - wastedassign
 
   disable:
-    - exhaustivestruct # deprecated
+    - depguard # creates a whitelist/blacklist of packages that can be imported; we don't have these lists (yet)
+    - exhaustivestruct # deprecated + we use a fork of it separately
+    - exhaustruct # checks if all the fields of a struct were initialized; we use a fork of it separately
+    - gocyclo # same as cyclop
+    - godot # checks that comments end with a period; annoying
+    - godox # checks for TODO and similar stuff; annoying
+    - gofmt # superceded by gofumpt
     - golint # deprecated, replaced with revive
+    - goheader # we don't use license headers
+    - gomoddirectives # don't really need to ban go.mod directives for now
+    - gomodguard # like depguard, but more flexible; don't need it for now
+    - grouper # analyzes import/type groups; not sure if we need it
+    - importas # enforces import aliasing rules; requires configuration, not sure if needed
     - interfacer # deprecated
     - maligned # deprecated, replaced with govet 'fieldalignment'
+    - nosnakecase # forbids snake case in variables; many false triggers on stuff like `unix.O_RDONLY`
     - scopelint # deprecated, replaced with exportloopref
+    - tagliatelle # enforce snake/kebab/etc rules on struct tags; needs config, not sure if needed
+
