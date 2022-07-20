@@ -19,6 +19,12 @@ GOPATH=$(go env GOPATH) || exit 1
 
 PWD=$(pwd)
 
+if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* || -f .exhaustivestruct ]]; then
+    echo "EXHAUSTIVESTRUCT:"
+    exhaustivestruct ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g"
+    echo "------------------------------------------------------------"
+fi
+
 if [[ -f ".golangci.yml" ]]; then
     echo "GOLANGCI-LINT:"
     golangci-lint run 2>&1

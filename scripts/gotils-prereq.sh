@@ -17,9 +17,8 @@ GOPATH=$(go env GOPATH) || exit 1
 
 read -r -d '' DEPS << EndOfDef
 github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
+github.com/jiping-s/exhaustivestruct/cmd/exhaustivestruct@v1.1.1
 EndOfDef
-
-export GO111MODULE=on
 
 pushd /tmp >/dev/null
 
