@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Environment variables:
+#   LINT_EXHAUSTIVESTRUCT: y/1/t to make sure all appropriate fields are assigned in construction
+
 set -o pipefail
 
 GOPATH=$(go env GOPATH) || exit 1
