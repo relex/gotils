@@ -58,12 +58,24 @@ linters-settings:
   gocognit:
     min-complexity: 30 # default: 30     
 
+  # might need more well defined config after we reenable it
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+      - opinionated
+
   govet:
     check-shadowing: true
     enable-all: true
-
+        
   lll:
     line-length: 150 # default: 120 
+
+  nlreturn:
+    block-size: 3
 
   nolintlint:
     allow-unused: false
@@ -85,7 +97,11 @@ linters-settings:
         disabled: true
       - name: cognitive-complexity
         disabled: true
+      - name: confusing-results
+        disabled: true
       - name: file-header
+        disabled: true
+      - name: flag-parameter
         disabled: true
       - name: function-length
         disabled: true
@@ -102,7 +118,7 @@ linters-settings:
       - name: function-result-limit
         severity: warning
         disabled: false
-        arguments: [2]
+        arguments: [3]
 
 
 linters:
@@ -141,7 +157,6 @@ linters:
     - misspell          # finds commonly misspelled English words in comments
     - nakedret          # finds naked returns in long functions 
     - nilnil            # checks that there is no simultaneous return of nil error and an invalid value
-    - nlreturn          # requires a newline before returns
     - nolintlint        # reports bad nolint directives
     - nonamedreturns    # warns on named returns
     - paralleltest      # detects missing usage of t.Parallel() method in tests
@@ -154,7 +169,6 @@ linters:
     - thelper           # detects golang test helpers without t.Helper() call and checks their consistency
     - unparam           # reports unused function parameters
     - whitespace        # checks for unnecessary newlines at the start and end of code blocks
-    - wsl               # forces to use empty lines where appropriate
 
       # non-configurable
     - asciicheck        # checks that your code does not contain non-ASCII identifiers
@@ -182,16 +196,17 @@ linters:
     - funlen            # enforces a limit on function length
     - gocognit          # enforces a limit on function complexity
     - goconst           # replace repeated strings with a constant
-    - gocritic          # a huge and opinionated linter
     - gomnd             # detects magic numbers
-    - ireturn           # disallows returing interfaces
+    - ireturn           # disallows returing interfaces ("accept interfaces, return concrete types")
     - lll               # warns on long lines
     - nestif            # warns on many nested ifs
-    - promlinter        # check Prometheus metrics naming via promlint
-    - varnamelen        # reports variables with too short names for their scope
+    - nlreturn          # requires a newline before returns
+    - promlinter        # check prometheus metrics naming via promlint
+    - varnamelen        # reports variables with names too short for their scope
     - wrapcheck         # checks whether the errors are wrapped
+    - wsl               # forces to use empty lines where appropriate
 
-    #   # non-configurable
+      # non-configurable
     - gochecknoglobals  # tells you not to use globals
     - gochecknoinits    # tells you not to use init() functions
     - goerr113          # makes you use static errors, it's a good one, but very annoying
@@ -199,6 +214,9 @@ linters:
     - nosnakecase       # forbids snake case in variables; may false trigger on stuff like `unix.O_RDONLY`
 
   disable:
+    # temporarily
+    - gocritic          # a huge and opinionated but useful linter; panics on generics, will enable it after it's fixed
+
     # deprecated
     - golint            # deprecated, replaced with revive
     - interfacer        # deprecated
