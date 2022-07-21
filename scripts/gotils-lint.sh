@@ -19,8 +19,8 @@
 set -o pipefail
 
 GOPATH=$(go env GOPATH) || exit 1
-
 PWD=$(pwd)
+FIXFLAG=$1
 
 if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* || -f .exhaustivestruct ]]; then
     echo "EXHAUSTIVESTRUCT:"
@@ -30,10 +30,10 @@ fi
 
 if [[ -f ".golangci.yml" ]]; then
     echo "GOLANGCI-LINT:"
-    golangci-lint run 2>&1
+    golangci-lint run $FIXFLAG 2>&1
 else
     echo "GOLANGCI-LINT: (default config)"
-    golangci-lint run -c ${GOPATH}/opt/gotils/templates/.golangci.yml 2>&1
+    golangci-lint run $FIXFLAG -c ${GOPATH}/opt/gotils/templates/.golangci.yml 2>&1
 fi
 
 exit 0
