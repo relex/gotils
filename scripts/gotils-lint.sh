@@ -29,7 +29,7 @@ if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* || -f .exhaustivestruct ]]; then
 fi
 
 if [[ -f ".golangci.yml" ]]; then
-    echo "GOLANGCI-LINT:"
+    echo "GOLANGCI-LINT: (custom config)"
     golangci-lint run $FIXFLAG 2>&1
 else
     echo "GOLANGCI-LINT: (default config)"
