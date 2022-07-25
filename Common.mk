@@ -36,7 +36,7 @@ gen:
 
 .PHONY: pretty
 pretty:
-	gofmt -w .
+	gotils-lint.sh --fix
 
 .PHONY: lint
 lint:

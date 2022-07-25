@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o pipefail
-
 # Environment variables:
 #   LINT_EXHAUSTIVESTRUCT: y/1/t to make sure all appropriate fields are assigned in construction
 
-GOPATH=$(go env GOPATH) || exit 1
+set -o pipefail
 
+GOPATH=$(go env GOPATH) || exit 1
 PWD=$(pwd)
+FIXFLAG=$1
 
 if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* || -f .exhaustivestruct ]]; then
     echo "EXHAUSTIVESTRUCT:"
@@ -28,28 +28,12 @@ if [[ "$LINT_EXHAUSTIVESTRUCT" =~ [1tTyY].* || -f .exhaustivestruct ]]; then
     echo "------------------------------------------------------------"
 fi
 
-echo "GO VET:"
-go vet ./... 2>&1
-echo "------------------------------------------------------------"
-
-echo "SCOPELINT:"
-scopelint ./... 2>&1
-echo "------------------------------------------------------------"
-
-echo "SHADOW:"
-shadow ./... 2>&1 | perl -pe "s|\Q$PWD/\E||g"
-echo "------------------------------------------------------------"
-
-echo "STATICCHECK:"
-staticcheck ./... 2>&1
-echo "------------------------------------------------------------"
-
 if [[ -f ".golangci.yml" ]]; then
-    echo "GOLANGCI-LINT:"
-    golangci-lint run 2>&1
+    echo "GOLANGCI-LINT: (custom config)"
+    golangci-lint run $FIXFLAG 2>&1
 else
     echo "GOLANGCI-LINT: (default config)"
-    golangci-lint run -c ${GOPATH}/opt/gotils/templates/.golangci.yml 2>&1
+    golangci-lint run $FIXFLAG -c ${GOPATH}/opt/gotils/templates/.golangci.yml 2>&1
 fi
 
 exit 0
