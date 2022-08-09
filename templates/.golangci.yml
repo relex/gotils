@@ -12,14 +12,12 @@ run:
   skip-files: [".*_test.go$"]
   tests: true # whether to include test files
 
-
 output:
-  format: tab
-  print-issued-lines: true
+  format: tab # Default: colored-line-number
+  print-issued-lines: false # Default: true (invisible with "tab" format)
   print-linter-name: true
   unique-by-line: true
   sort-results: true
-
 
 linters-settings:
   cyclop:
@@ -56,7 +54,7 @@ linters-settings:
     statements: 70
 
   gocognit:
-    min-complexity: 30 # default: 30     
+    min-complexity: 30 # default: 30
 
   # might need more well defined config after we reenable it
   gocritic:
@@ -70,9 +68,11 @@ linters-settings:
   govet:
     check-shadowing: true
     enable-all: true
-        
+    disable:
+      - fieldalignment
+
   lll:
-    line-length: 150 # default: 120 
+    line-length: 150 # default: 120
 
   nlreturn:
     block-size: 3
@@ -120,7 +120,6 @@ linters-settings:
         disabled: false
         arguments: [3]
 
-
 linters:
   # enable-all: true
   # disable-all: true
@@ -137,9 +136,9 @@ linters:
     - unused            # warns on unused types/functions/etc
     - varcheck          # finds unused global variables and constants
 
+    # Essential linters that should not be disabled in custom configs
 
-    # essential linters that should not be disabled in custom configs
-      # configurable
+    # configurable
     - asasalint         # makes sure you don't pass `[]any` as `any`
     - bidichk           # checks for invisible unicode characters
     - dogsled           # finds assignments with too many blank identifiers, e.g. x, _, _ := f()
@@ -155,7 +154,7 @@ linters:
     - maintidx          # measures the maintainability index of each function
     - makezero          # finds slice declarations with non-zero initial length
     - misspell          # finds commonly misspelled English words in comments
-    - nakedret          # finds naked returns in long functions 
+    - nakedret          # finds naked returns in long functions
     - nilnil            # checks that there is no simultaneous return of nil error and an invalid value
     - nolintlint        # reports bad nolint directives
     - nonamedreturns    # warns on named returns
@@ -170,13 +169,13 @@ linters:
     - unparam           # reports unused function parameters
     - whitespace        # checks for unnecessary newlines at the start and end of code blocks
 
-      # non-configurable
+    # non-configurable
     - asciicheck        # checks that your code does not contain non-ASCII identifiers
     - bodyclose         # checks whether HTTP response body is closed successfully
     - containedctx      # detects structs with context.Context field
     - contextcheck      # checks if you use a non-inherited context
     - durationcheck     # makes sure you don't multiply two instances of time.Duration
-    - errname           # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error 
+    - errname           # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
     - execinquery       # checks where you could use db.Exec instead of db.Query
     - exportloopref     # checks for pointers to enclosing loop variables
     - goprintffuncname  # checks that printf-like functions are named with `f` at the end
@@ -187,9 +186,9 @@ linters:
     - unconvert         # warns on unnecessary type conversions
     - wastedassign      # finds unused (re)assignments
 
+    # These can be disabled in custom configs if there's a real need for that
 
-    # these can be disabled in custom configs if there's a real need for that
-      # configurable
+    # configurable
     - cyclop            # checks cyclomatic complexity
     - decorder          # checks the order and number of declaration
     - errorlint         # makes sure you wrap errors correctly
@@ -206,7 +205,7 @@ linters:
     - wrapcheck         # checks whether the errors are wrapped
     - wsl               # forces to use empty lines where appropriate
 
-      # non-configurable
+    # non-configurable
     - gochecknoglobals  # tells you not to use globals
     - gochecknoinits    # tells you not to use init() functions
     - goerr113          # makes you use static errors, it's a good one, but very annoying
@@ -241,5 +240,3 @@ linters:
     - importas          # enforces import aliasing rules; requires configuration, not sure if needed
     - tagliatelle       # enforce snake/kebab/etc rules on struct tags; needs config, not sure if needed
     - testpackage       # makes you use a separate *_test package for tests
-
-
