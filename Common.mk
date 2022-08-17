@@ -24,6 +24,11 @@ SOURCES_NONTEST := $(shell find . -name '*.go' -not -name '*_test.go')
 test:
 	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -v ./...
 
+# test-all ignores testcache (go clean testcache)
+.PHONY: test-all
+test-all:
+	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -v -count=1 ./...
+
 # the rest of targets below are sorted by workflow
 
 .PHONY: prereq

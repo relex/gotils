@@ -111,7 +111,8 @@ func SetAutoFormat() {
 	case "", "auto":
 		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
 	default:
-		Fatal("Invalid log color mode: \"" + colorYN + "\"")
+		Errorf("Invalid LOG_COLOR value: '%s', select 'auto' with text as fallback", colorYN)
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
 	}
 }
 
@@ -126,22 +127,21 @@ func SetAutoJSONFormat() {
 	case "", "auto":
 		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.JSONFormatter))
 	default:
-		Fatal("Invalid log color mode: \"" + colorYN + "\"")
+		Errorf("Invalid LOG_COLOR value: '%s', select 'auto' with JSON as fallback", colorYN)
+		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.JSONFormatter))
 	}
 }
 
 // SetJSONFormat sets the upstream compatible logging format in JSON. For example:
 //
-//     {"timestamp":"2006/02/01T15:04:05.123+0200","level":"info","message":"A group of walrus emerges from theocean"}
-//
+//	{"timestamp":"2006/02/01T15:04:05.123+0200","level":"info","message":"A group of walrus emerges from theocean"}
 func SetJSONFormat() {
 	root.entry.Logger.SetFormatter(priv.JSONFormatter)
 }
 
 // SetTextFormat sets the default text format. For example:
 //
-//    time="2006/02/01T15:04:05.123+0200" level=debug msg="Started observing beach"
-//
+//	time="2006/02/01T15:04:05.123+0200" level=debug msg="Started observing beach"
 func SetTextFormat() {
 	root.entry.Logger.SetFormatter(priv.TextFormatter)
 }
@@ -152,6 +152,7 @@ func SetDefaultLevel() {
 	if len(level) > 0 {
 		SetLogLevel(LogLevel(strings.ToLower(level)))
 	} else {
+		Error("Invalid LOG_LEVEL value: '%s', select 'info'")
 		SetLogLevel(InfoLevel)
 	}
 }
