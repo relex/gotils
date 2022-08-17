@@ -89,6 +89,8 @@ var (
 	rootCounterForTrace = counterVec.WithLabelValues("(root)", string(TraceLevel))
 
 	root = wrapRootLogger(logrus.NewEntry(logrus.New()))
+
+	ownLogger = WithField(priv.LabelComponent, "logger")
 )
 
 func init() {
@@ -111,7 +113,7 @@ func SetAutoFormat() {
 	case "", "auto":
 		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
 	default:
-		Errorf("Invalid LOG_COLOR value: '%s', select 'auto' with text as fallback", colorYN)
+		ownLogger.Errorf("Invalid LOG_COLOR value: '%s', select 'auto' with text as fallback", colorYN)
 		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.TextFormatter))
 	}
 }
@@ -127,7 +129,7 @@ func SetAutoJSONFormat() {
 	case "", "auto":
 		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.JSONFormatter))
 	default:
-		Errorf("Invalid LOG_COLOR value: '%s', select 'auto' with JSON as fallback", colorYN)
+		ownLogger.Errorf("Invalid LOG_COLOR value: '%s', select 'auto' with JSON as fallback", colorYN)
 		root.entry.Logger.SetFormatter(priv.NewConsoleLogFormatter(false, priv.JSONFormatter))
 	}
 }
@@ -149,19 +151,24 @@ func SetTextFormat() {
 // SetDefaultLevel sets the default logging level depending on environment variable "LOG_LEVEL"
 func SetDefaultLevel() {
 	level := os.Getenv("LOG_LEVEL")
-	if len(level) > 0 {
-		SetLogLevel(LogLevel(strings.ToLower(level)))
-	} else {
-		Error("Invalid LOG_LEVEL value: '%s', select 'info'")
+	if len(level) == 0 {
 		SetLogLevel(InfoLevel)
+		return
 	}
+
+	logrusLevel, exists := levelMap[LogLevel(strings.ToLower(level))]
+	if !exists {
+		ownLogger.Errorf("Invalid LOG_LEVEL value: '%s', select 'info'", level)
+		logrusLevel = logrus.InfoLevel
+	}
+	root.entry.Logger.SetLevel(logrusLevel)
 }
 
 // SetLogLevel sets the level of the root logger
 func SetLogLevel(level LogLevel) {
 	logrusLevel, exists := levelMap[level]
 	if !exists {
-		Fatal("Invalid log level: \"" + string(level) + "\"")
+		ownLogger.Fatalf("Invalid log level: '%s'", level)
 	}
 	root.entry.Logger.SetLevel(logrusLevel)
 }
@@ -192,7 +199,8 @@ func setDefaultUpstream() {
 func SetUpstreamEndpoint(endpoint string) {
 	host, _, err := net.SplitHostPort(endpoint)
 	if err != nil {
-		Fatal(fmt.Sprintf("Unable to parse upstream endpoint '%s': %v", endpoint, err))
+		ownLogger.Errorf("Unable to parse upstream endpoint '%s': %v", endpoint, err)
+		return
 	}
 	var hook logrus.Hook
 	if isLocalhost(host) {
