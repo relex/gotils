@@ -86,7 +86,7 @@ func TestCacherGetFromCacheForBadServer(t *testing.T) {
 			logger.Info("Received first call from real server - return JSON error")
 			assert.EqualError(t, jsonErr, "invalid character 'N' looking for beginning of value", "error from malformed remote JSON")
 		case 1:
-			logger.Info("Received first call from previous cache - return okay")
+			logger.Info("Received second call from previous cache - return okay")
 			assert.Nil(t, jsonErr, "no error from cached result")
 		}
 		numCalls++
