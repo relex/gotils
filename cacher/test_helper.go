@@ -19,6 +19,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+
+	"github.com/relex/gotils/channels"
 )
 
 const (
@@ -27,12 +29,10 @@ const (
 	cacheDir string = "test_cache"
 )
 
-var (
-	server http.Server
-)
-
-// StartHTTPServer starts a HTTP server in background
-func StartHTTPServer(testFilePath string) {
+// StartHTTPServer starts a HTTP server in background.
+//
+// Returns a function that closes the server and the listener completely
+func StartHTTPServer(testFilePath string) func() {
 	data := readFile(testFilePath)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Host == Addr {
@@ -47,14 +47,20 @@ func StartHTTPServer(testFilePath string) {
 	if lsnrErr != nil {
 		log.Panicf("cannot listen on %s: %s", Addr, lsnrErr)
 	}
-	server = http.Server{Handler: handler, Addr: Addr}
-	go server.Serve(lsnr)
-}
 
-// StopHTTPServer stops a HTTP server
-func StopHTTPServer() {
-	server.Close()
-	server = http.Server{}
+	server := http.Server{Handler: handler, Addr: Addr}
+	serverDead := channels.NewSignalAwaitable()
+	go func() {
+		server.Serve(lsnr)
+		serverDead.Signal()
+	}()
+
+	// Need to wait for .Serve() because .Close() only closes incoming connections, not the listener itself.
+	// Without waiting, tests could spawn new servers too soon, before the previous listener on the same address is still alive.
+	return func() {
+		server.Close()
+		serverDead.WaitForever()
+	}
 }
 
 func readFile(path string) []byte {

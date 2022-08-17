@@ -21,6 +21,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/relex/gotils/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,11 +29,17 @@ func init() {
 	removeCache()
 }
 
-func TestCacherGet(t *testing.T) {
-	StartHTTPServer("../test_data/cacher-response-cache.json")
+func serveAndCache() (string, error) {
+	shutdownServer := StartHTTPServer("../test_data/cacher-response-cache.json")
+	defer shutdownServer()
 
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
 	body, err := GetFromURLOrDefaultCache(req, cacheDir)
+	return body, err
+}
+
+func TestCacherGet(t *testing.T) {
+	body, err := serveAndCache()
 
 	assert.Nil(t, err)
 	assert.Contains(t, body, "foo.domain.com")
@@ -40,10 +47,11 @@ func TestCacherGet(t *testing.T) {
 	assert.Contains(t, body, "bar.domain.com")
 	assert.Contains(t, body, "\"cluster\": \"non-clustered\"")
 	assert.Contains(t, body, "\"in_support\": \"false\"")
-	StopHTTPServer()
 }
 
 func TestCacherGetFromCacheFile(t *testing.T) {
+	serveAndCache()
+
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
 	body, err := GetFromURLOrDefaultCache(req, cacheDir)
 
@@ -56,7 +64,10 @@ func TestCacherGetFromCacheFile(t *testing.T) {
 }
 
 func TestCacherGetFromCacheForBadServer(t *testing.T) {
-	StartHTTPServer("../test_data/not-json.json")
+	serveAndCache()
+
+	shutdownServer := StartHTTPServer("../test_data/not-json.json")
+	defer shutdownServer()
 
 	type targetGroup struct {
 		Targets []string
@@ -72,8 +83,10 @@ func TestCacherGetFromCacheForBadServer(t *testing.T) {
 		jsonErr := json.Unmarshal(data, &body)
 		switch numCalls {
 		case 0:
+			logger.Info("Received first call from real server - return JSON error")
 			assert.EqualError(t, jsonErr, "invalid character 'N' looking for beginning of value", "error from malformed remote JSON")
 		case 1:
+			logger.Info("Received first call from previous cache - return okay")
 			assert.Nil(t, jsonErr, "no error from cached result")
 		}
 		numCalls++
@@ -106,8 +119,6 @@ func TestCacherGetFromCacheForBadServer(t *testing.T) {
 			},
 		},
 	})
-
-	StopHTTPServer()
 }
 
 func TestCacherGetWithoutCacheFileAndConnection(t *testing.T) {
