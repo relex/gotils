@@ -52,26 +52,30 @@ Create Makefile, ex:
 ```makefile
 GOPATH := $(shell go env GOPATH)
 
-build: BUILD/fluentlibtool
-
 include ${GOPATH}/opt/gotils/Common.mk
-
-BUILD/fluentlibtool: Makefile go.mod $(SOURCES_NONTEST)
-	gotils-build.sh -o $@
 ```
 
 - `GOPATH` must be defined before `include`
+- `OUTDIR` from *Common.mk* is `BUILD` by default
 - `SOURCES` from *Common.mk* includes all .go files
 - `SOURCES_NONTEST` from *Common.mk* includes all non-test .go files
 
-Add *build* and other targets if needed; By default, `make` equals to `make test` (defined in *Common.mk*)
+To override commands, just append them after `include`:
+
+```makefile
+BUILD/fluentlibtool: Makefile go.mod $(SOURCES_NONTEST)
+	special-build-command.sh -o $@
+
+test:
+	special-test-command.sh
+```
 
 ## Commands and Options:
 
 Common Make targets:
 
-- (no build, add manually)
-- `make test`: run go test and generate reports
+- `make build`: build the target `BUILD/dirname` (executable name = dir name)
+- `make test`: run go tests
 - `make lint`: run all lint checks
 - `make pretty`: format code
 - `make clean`: remove output
