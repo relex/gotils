@@ -29,34 +29,34 @@ test-default:
 	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -v ./...
 
 # test-all ignores testcache (go clean testcache)
-.PHONY: test-all test-all-default
+.PHONY: test-all-default
 test-all-default:
 	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -v -count=1 ./...
 
 # The rest of targets should be sorted by workflow and frequency
 
-.PHONY: prereq prereq-default
+.PHONY: prereq-default
 prereq-default:
 	gotils-prereq.sh
 
-.PHONY: gen gen-default
+.PHONY: gen-default
 gen-default:
 	go generate ./...
 
-.PHONY: pretty pretty-default
+.PHONY: pretty-default
 pretty-default:
 	gotils-lint.sh --fix
 
-.PHONY: lint lint-default
+.PHONY: lint-default
 lint-default:
 	gotils-lint.sh
 
-.PHONY: clean clean-default
+.PHONY: clean-default
 clean-default:
 	rm -rf BUILD/*
 	go clean
 
-.PHONY: upgrade upgrade-default
+.PHONY: upgrade-default
 upgrade-default:
 	rm -f go.sum
 	go get -u -d ./...; go mod tidy
