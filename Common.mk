@@ -15,7 +15,7 @@ SHELL := /bin/bash
 
 AUTO_BUILD_VERSION ?= dev
 OURDIR := BUILD
-OUTPUT := ${OURDIR}/$(shell basename $(shell dirname $(shell realpath $(firstword $(MAKEFILE_LIST)))))
+OUTPUT := ${OURDIR}/$(shell basename $(shell pwd))
 
 SOURCES := $(shell find . -name '*.go')
 SOURCES_NONTEST := $(shell find . -name '*.go' -not -name '*_test.go')
