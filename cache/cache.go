@@ -60,7 +60,11 @@ func (cache redisCache[T]) Get(key string) (*T, error) {
 }
 
 func (cache redisCache[T]) Set(key string, value T, expiration time.Duration) error {
-	err := cache.client.Set(ctx, key, value, expiration).Err()
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	err = cache.client.Set(ctx, key, bytes, expiration).Err()
 	if err != nil {
 		return err
 	}
