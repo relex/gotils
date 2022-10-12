@@ -13,40 +13,55 @@
 
 package promexporter
 
-// Target is a prometheus scrape target
-// Labels must be a comparable struct, see `GetLabelNames` function description
-type Target struct {
+import (
+	"fmt"
+
+	"github.com/relex/gotils/generics"
+	"golang.org/x/exp/slices"
+)
+
+// Target is a prometheus scrape target.
+//
+// Labels must be a comparable struct, see `GetLabelNames` function description.
+type Target[L comparable] struct {
 	Target string
-	Labels interface{}
+	Labels L
 }
 
 // TargetGroup is a group of scrape targets sharing the same labels.
+//
 // Each group normally represent the deployment one cluster on one server.
-type TargetGroup struct {
-	Targets []string    `json:"targets"`
-	Labels  interface{} `json:"labels"`
+type TargetGroup[L comparable] struct {
+	Targets []string `json:"targets"`
+	Labels  L        `json:"labels"`
 }
 
 // GroupTargets groups targets by distinct label values
-func GroupTargets(targetList []Target) []TargetGroup {
-	targetGroupByLabels := make(map[interface{}]TargetGroup)
+//
+// The resulting target groups and the target addresses inside each group are ordered by their string representations
+// to ensure stable ordering.
+func GroupTargets[L comparable](targetList []Target[L]) []TargetGroup[L] {
+	groupMap := generics.GroupSlice(targetList, func(t Target[L]) L {
+		return t.Labels
+	})
 
-	for _, target := range targetList {
-		if group, exists := targetGroupByLabels[target.Labels]; exists {
-			group.Targets = append(group.Targets, target.Target)
-		} else {
-			targetGroupByLabels[target.Labels] = TargetGroup{
-				Targets: []string{target.Target},
-				Labels:  target.Labels,
+	return generics.MapToSliceWithSortFunc(
+		groupMap,
+
+		func(labels L, targets []Target[L]) TargetGroup[L] {
+			targetAddresses := generics.MapSlice(targets, func(target Target[L]) string {
+				return target.Target
+			})
+			slices.Sort(targetAddresses)
+
+			return TargetGroup[L]{
+				Targets: targetAddresses,
+				Labels:  labels,
 			}
-		}
-	}
+		},
 
-	result := make([]TargetGroup, len(targetGroupByLabels))
-	i := 0
-	for _, group := range targetGroupByLabels {
-		result[i] = group
-		i++
-	}
-	return result
+		func(labels1, labels2 L) bool {
+			return fmt.Sprint(labels1) < fmt.Sprint(labels2)
+		},
+	)
 }
