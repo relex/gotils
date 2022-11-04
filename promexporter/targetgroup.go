@@ -16,7 +16,7 @@ package promexporter
 import (
 	"fmt"
 
-	"github.com/relex/gotils/generics"
+	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 )
 
@@ -24,7 +24,7 @@ import (
 //
 // Labels must be a comparable struct, see `GetLabelNames` function description.
 type Target[L comparable] struct {
-	Target string
+	Target string // address, e.g. "host.org:12340"
 	Labels L
 }
 
@@ -41,27 +41,25 @@ type TargetGroup[L comparable] struct {
 // The resulting target groups and the target addresses inside each group are ordered by their string representations
 // to ensure stable ordering.
 func GroupTargets[L comparable](targetList []Target[L]) []TargetGroup[L] {
-	groupMap := generics.GroupSlice(targetList, func(t Target[L]) L {
+	targetGroupMap := lo.GroupBy(targetList, func(t Target[L]) L {
 		return t.Labels
 	})
 
-	return generics.MapToSliceWithSortFunc(
-		groupMap,
+	targetGroups := lo.MapToSlice(targetGroupMap, func(labels L, targets []Target[L]) TargetGroup[L] {
+		targetAddresses := lo.Map(targets, func(target Target[L], _ int) string {
+			return target.Target
+		})
+		slices.Sort(targetAddresses)
 
-		func(labels L, targets []Target[L]) TargetGroup[L] {
-			targetAddresses := generics.MapSlice(targets, func(target Target[L]) string {
-				return target.Target
-			})
-			slices.Sort(targetAddresses)
+		return TargetGroup[L]{
+			Targets: targetAddresses,
+			Labels:  labels,
+		}
+	})
 
-			return TargetGroup[L]{
-				Targets: targetAddresses,
-				Labels:  labels,
-			}
-		},
+	slices.SortStableFunc(targetGroups, func(a, b TargetGroup[L]) bool {
+		return fmt.Sprint(a.Labels) < fmt.Sprint(b.Labels)
+	})
 
-		func(labels1, labels2 L) bool {
-			return fmt.Sprint(labels1) < fmt.Sprint(labels2)
-		},
-	)
+	return targetGroups
 }
