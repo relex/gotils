@@ -28,13 +28,21 @@ import (
 
 func TestMetricsDumpAndSum(t *testing.T) {
 	gv := prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "test_gauge"}, []string{"group", "class", "brand"})
+
 	gv.WithLabelValues("Vehicle", "Car", "V").Add(20)
+
 	g := gv.MustCurryWith(map[string]string{"group": "Vehicle", "brand": "V"})
 	g.WithLabelValues("Car").Sub(3)
 	g.WithLabelValues("Boat").Set(7)
 
 	gv.WithLabelValues("Test", "X", "T").Add(1)
+
 	assert.EqualValues(t, 25, SumMetricValues(gv))
+	assert.EqualValues(t, 24, SumMetricValues2(gv, prometheus.Labels{"group": "Vehicle"}))
+	assert.EqualValues(t, map[string]float64{
+		"T": 1.0,
+		"V": 24.0,
+	}, SumMetricValuesBy(gv, "brand", nil))
 
 	reg := prometheus.NewPedanticRegistry()
 	assert.Nil(t, reg.Register(gv))

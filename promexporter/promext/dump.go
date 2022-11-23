@@ -82,10 +82,52 @@ func DumpMetrics(prefix string, skipComments, skipZeroValues bool, gatherers ...
 	return strings.Join(linesFiltered, "\n")
 }
 
-// SumMetricValues sums all the values of a given Prometheus Collector (GaugeVec or CounterVec)
+// SumMetricValuesBy sums all the values of a given Prometheus Collector (GaugeVec or CounterVec) by a specific label.
 //
-// Only works with top-level MetricVec, not curried MetricVec
+// If the label does not exist for some of the metrics, the values would be summed under key="" in the resulting map.
+//
+// Note curried metric vectors would give the same result as uncurried ones.
+func SumMetricValuesBy(c prometheus.Collector, keyLabel string, filterLabels prometheus.Labels) map[string]float64 {
+	dtoMetrics, merr := CollectMetrics(c, filterLabels)
+	if merr != nil {
+		panic(merr) // can't call logger due to cyclic import
+	}
+
+	sumByKey := make(map[string]float64, len(dtoMetrics))
+	for _, pb := range dtoMetrics {
+		kv := GetLabelValue(pb, keyLabel)
+		sumByKey[kv] += GetExportedMetricValue(pb)
+	}
+	return sumByKey
+}
+
+// SumMetricValues sums all the values of a given Prometheus Collector (GaugeVec or CounterVec).
+//
+// Note curried metric vectors would give the same result as uncurried ones.
 func SumMetricValues(c prometheus.Collector) float64 {
+	return SumMetricValues2(c, nil)
+}
+
+// SumMetricValues2 sums all the values of a given Prometheus Collector (GaugeVec or CounterVec), with a set of labels for filtering.
+//
+// Note curried metric vectors would give the same result as uncurried ones.
+func SumMetricValues2(c prometheus.Collector, filterLabels prometheus.Labels) float64 {
+	dtoMetrics, merr := CollectMetrics(c, filterLabels)
+	if merr != nil {
+		panic(merr) // can't call logger due to cyclic import
+	}
+
+	sum := 0.0
+	for _, pb := range dtoMetrics {
+		sum += GetExportedMetricValue(pb)
+	}
+	return sum
+}
+
+// CollectMetrics exports all metrics matching an optional set of labels.
+//
+// The values are already final during the collection. They won't change despite being pointers.
+func CollectMetrics(c prometheus.Collector, filterLabels prometheus.Labels) ([]*dto.Metric, error) {
 	// modified from github.com/prometheus/client_golang/prometheus/testutil.ToFloat64
 	var (
 		mList = make([]prometheus.Metric, 0, 100)
@@ -102,14 +144,14 @@ func SumMetricValues(c prometheus.Collector) float64 {
 	close(mChan)
 	<-done
 
-	sum := 0.0
+	dtoMetrics := make([]*dto.Metric, 0, len(mList))
 	for _, m := range mList {
 		pb := &dto.Metric{}
 		if err := m.Write(pb); err != nil {
-			// should be impossible
-			panic(fmt.Sprintf("failed to read metric '%s': %s", m.Desc(), err.Error()))
+			return nil, fmt.Errorf("failed to read metric '%s': %w", m.Desc(), err)
 		}
-		sum += GetExportedMetricValue(pb)
+		dtoMetrics = append(dtoMetrics, pb)
 	}
-	return sum
+
+	return MatchExportedMetrics(dtoMetrics, filterLabels), nil
 }

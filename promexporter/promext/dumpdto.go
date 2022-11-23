@@ -16,14 +16,16 @@ package promext
 import (
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/samber/lo"
 )
 
 // SumExportedMetrics returns the sum of values from metrics matching the labels
 func SumExportedMetrics(metricFamily *dto.MetricFamily, labels map[string]string) float64 {
 	sum := 0.0
 
-	for _, m := range MatchExportedMetrics(metricFamily, labels) {
+	for _, m := range MatchExportedMetrics(metricFamily.Metric, labels) {
 		sum += GetExportedMetricValue(m)
 	}
 
@@ -31,10 +33,12 @@ func SumExportedMetrics(metricFamily *dto.MetricFamily, labels map[string]string
 }
 
 // MatchExportedMetrics lists metrics under a family by matching given labels
-func MatchExportedMetrics(metricFamily *dto.MetricFamily, labels map[string]string) []*dto.Metric {
-	matchedMetrics := make([]*dto.Metric, 0, len(metricFamily.Metric))
-
-	for _, m := range metricFamily.Metric {
+func MatchExportedMetrics(metrics []*dto.Metric, labels prometheus.Labels) []*dto.Metric {
+	if len(labels) == 0 {
+		return metrics
+	}
+	matchedMetrics := make([]*dto.Metric, 0, len(metrics))
+	for _, m := range metrics {
 		matchedLabels := 0
 		for _, lbl := range m.Label {
 			if labels[*lbl.Name] == *lbl.Value {
@@ -45,8 +49,23 @@ func MatchExportedMetrics(metricFamily *dto.MetricFamily, labels map[string]stri
 			matchedMetrics = append(matchedMetrics, m)
 		}
 	}
-
 	return matchedMetrics
+}
+
+// GetLabelValue reads the value of a specific label from the given metric.
+//
+// If the label does not exist, an empty string is returned.
+func GetLabelValue(metric *dto.Metric, targetLabel string) string {
+	pair, found := lo.Find(metric.Label, func(l *dto.LabelPair) bool {
+		return l != nil && l.Name != nil && *l.Name == targetLabel
+	})
+	if !found {
+		return ""
+	}
+	if pair.Value == nil {
+		return ""
+	}
+	return *pair.Value
 }
 
 // GetExportedMetricValue returns the value of the exported (protobuf) metric.
