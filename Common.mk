@@ -25,7 +25,7 @@ build-default: ${OUTPUT}
 
 # use pattern % to prevent warning when overridden in parent Makefile
 ${OUTPUT}%: Makefile go.mod $(SOURCES_NONTEST)
-	CGO_ENABLED=$${CGO_ENABLED:-0} GO_LDFLAGS="-X main.version=$(AUTO_BUILD_VERSION)" go build -o ${OUTPUT}
+	CGO_ENABLED=$${CGO_ENABLED:-0} go build -ldflags="$${GO_LDFLAGS:--X main.version=$(AUTO_BUILD_VERSION)}" -o=${OUTPUT}
 
 .PHONY: test-default
 test-default:
