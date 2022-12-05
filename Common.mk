@@ -14,11 +14,11 @@
 SHELL := /bin/bash
 
 AUTO_BUILD_VERSION ?= dev
-OURDIR := BUILD
-OUTPUT := ${OURDIR}/$(shell basename $(shell pwd))
+OURDIR ?= BUILD
+OUTPUT ?= ${OURDIR}/$(shell basename $(shell pwd))
 
-SOURCES := $(shell find . -name '*.go')
-SOURCES_NONTEST := $(shell find . -name '*.go' -not -name '*_test.go')
+SOURCES ?= $(shell find . -name '*.go')
+SOURCES_NONTEST ?= $(shell find . -name '*.go' -not -name '*_test.go')
 
 .PHONY: build-default
 build-default: ${OUTPUT}
@@ -56,7 +56,7 @@ lint-default:
 
 .PHONY: clean-default
 clean-default:
-	rm -rf BUILD/*
+	rm -f ${OUTPUT}
 	go clean
 
 .PHONY: upgrade-default
