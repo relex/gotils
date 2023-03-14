@@ -13,7 +13,6 @@ import (
 type Cache[T any] interface {
 	Get(key string) (*T, error)
 	Set(key string, value T, expiration time.Duration) error
-	Del(key string) error
 	HealthCheck() error
 }
 
@@ -79,18 +78,6 @@ func (cache redisCache[T]) HealthCheck() error {
 	}
 	if val != "PONG" {
 		err := fmt.Errorf("received an invalid response to PING from redis")
-		return err
-	}
-	return nil
-}
-
-func (cache redisCache[T]) Del(keys string) error {
-	val, err := cache.client.Del(ctx, keys).Result()
-	if err != nil {
-		return err
-	}
-	if val == 0 {
-		err := fmt.Errorf("nothing to delete with key(s): %s", keys)
 		return err
 	}
 	return nil
