@@ -35,3 +35,16 @@ func PushMetrics(url string, job string) {
 		logger.Error("failed to push metrics: ", err)
 	}
 }
+
+// AddMetrics pushes all metrics in the default registry to the target URL
+// without overriding previously pushed metrics for this job
+//
+// The URL should contain no path for the official pushgateway
+func AddMetrics(url string, job string) {
+	client := &http.Client{}
+	client.Timeout = pushMetricsTimeout // default is no timeout
+	err := push.New(url, job).Gatherer(prometheus.DefaultGatherer).Client(client).Add()
+	if err != nil {
+		logger.Error("failed to push metrics: ", err)
+	}
+}
