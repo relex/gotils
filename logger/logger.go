@@ -75,7 +75,7 @@ var (
 		DebugLevel:    logrus.DebugLevel,
 		TraceLevel:    logrus.TraceLevel,
 	}
-	counterVec = promext.NewLazyRWCounterVec(prometheus.CounterOpts{
+	counterVec = promext.NewRWCounterVec(prometheus.CounterOpts{
 		Name: "logger_logs_total",
 		Help: "Numbers of logs including warnings",
 	}, []string{priv.LabelComponent, "level"})
