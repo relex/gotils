@@ -66,6 +66,9 @@ linters-settings:
   gocognit:
     min-complexity: 30 # default: 30
 
+  goconst:
+    min-occurrences: 4
+
   # might need more well defined config after we reenable it
   gocritic:
     enabled-tags:
@@ -74,12 +77,18 @@ linters-settings:
       - performance
       - experimental
       - opinionated
+    disabled-checks:
+      - unnamedResult
+    settings:
+      hugeParam:
+        sizeThreshold: 200
 
   gomnd:
     ignored-functions:
       - "os.FileMode"
       - "os.Mkdir"
       - "file.Chmod"
+      - "context.WithTimeout"
 
   govet:
     check-shadowing: true
@@ -87,6 +96,14 @@ linters-settings:
     disable:
       - fieldalignment
       - nilness
+
+  ireturn:
+    allow:
+      - anon
+      - error
+      - empty
+      - stdlib
+      - "jwk.Set"
 
   lll:
     line-length: 200 # default: 120
