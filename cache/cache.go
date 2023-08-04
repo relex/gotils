@@ -13,6 +13,8 @@ import (
 type Cache[T any] interface {
 	Get(key string) (*T, error)
 	Set(key string, value T, expiration time.Duration) error
+	SetNX(key string, value T, expiration time.Duration) (bool, error)
+	Del(key string) error
 	HealthCheck() error
 }
 
