@@ -72,12 +72,16 @@ func (cache redisCache[T]) Set(key string, value T, expiration time.Duration) er
 }
 
 // SetNX sets the value of key `key` to `value` if the key does not exist.
-func (cache redisCache[T]) SetNX(key string, value T, expiration time.Duration) error {
+func (cache redisCache[T]) SetNX(key string, value T, expiration time.Duration) (bool, error) {
 	bytes, err := json.Marshal(value)
 	if err != nil {
-		return err
+		return false, err
 	}
-	err = cache.client.SetNX(ctx, key, bytes, expiration).Err()
+	return cache.client.SetNX(ctx, key, bytes, expiration).Result()
+}
+
+func (cache redisCache[T]) Del(key string) error {
+	err := cache.client.Del(ctx, key).Err()
 	if err != nil {
 		return err
 	}
