@@ -15,6 +15,7 @@ package promexporter
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
@@ -57,8 +58,8 @@ func GroupTargets[L comparable](targetList []Target[L]) []TargetGroup[L] {
 		}
 	})
 
-	slices.SortStableFunc(targetGroups, func(a, b TargetGroup[L]) bool {
-		return fmt.Sprint(a.Labels) < fmt.Sprint(b.Labels)
+	slices.SortStableFunc(targetGroups, func(a, b TargetGroup[L]) int {
+		return strings.Compare(fmt.Sprint(a.Labels), fmt.Sprint(b.Labels))
 	})
 
 	return targetGroups
