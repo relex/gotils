@@ -75,6 +75,15 @@ var (
 		DebugLevel:    logrus.DebugLevel,
 		TraceLevel:    logrus.TraceLevel,
 	}
+	reverseLevelMap = map[logrus.Level]LogLevel{
+		logrus.PanicLevel: PanicLevel,
+		logrus.FatalLevel: FatalLevel,
+		logrus.ErrorLevel: ErrorLevel,
+		logrus.WarnLevel:  WarnLevel,
+		logrus.InfoLevel:  InfoLevel,
+		logrus.DebugLevel: DebugLevel,
+		logrus.TraceLevel: TraceLevel,
+	}
 	counterVec = promext.NewRWCounterVec(prometheus.CounterOpts{
 		Name: "logger_logs_total",
 		Help: "Numbers of logs including warnings",
@@ -162,6 +171,10 @@ func SetDefaultLevel() {
 		logrusLevel = logrus.InfoLevel
 	}
 	root.entry.Logger.SetLevel(logrusLevel)
+}
+
+func GetLogLevel() LogLevel {
+	return reverseLevelMap[root.entry.Logger.GetLevel()]
 }
 
 // SetLogLevel sets the level of the root logger
