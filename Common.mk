@@ -29,12 +29,14 @@ ${OUTPUT}%: Makefile go.mod $(SOURCES_NONTEST)
 
 .PHONY: test-default
 test-default:
-	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -v ./...
+	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -coverprofile ${OUTDIR}/cover.out -v ./...
+	go tool cover -html ${OUTDIR}/cover.out -o ${OUTDIR}/cover.html
 
 # test-all ignores testcache (go clean testcache)
 .PHONY: test-all-default
 test-all-default:
-	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -v -count=1 ./...
+	CGO_ENABLED=$${CGO_ENABLED:-0} LOG_LEVEL=$${LOG_LEVEL:-warn} LOG_COLOR=$${LOG_COLOR:-Y} go test -timeout $${TEST_TIMEOUT:-10s} -coverprofile ${OUTDIR}/cover.out -v -count=1 ./...
+	go tool cover -html ${OUTDIR}/cover.out -o ${OUTDIR}/cover.html
 
 # The rest of targets should be sorted by workflow and frequency
 
