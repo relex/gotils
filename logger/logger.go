@@ -492,6 +492,11 @@ func (logger Logger) WithFields(fields map[string]interface{}) Logger {
 	return wrapLogger(entry, logger)
 }
 
+// NewWriter creates an io.Writer on this logger. Each .Write() call would log a message.
+func (logger Logger) NewWriter(level LogLevel) io.Writer {
+	return newLogWriter(logger, level)
+}
+
 func buildSprintPrefixes(fields map[string]interface{}) []string {
 	prefixList := make([]string, 0, 3)
 
