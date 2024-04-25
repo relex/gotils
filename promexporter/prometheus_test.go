@@ -25,4 +25,5 @@ func TestStructureReflection(t *testing.T) {
 
 	assert.Equal(t, promexporter.GetLabelNames(labels), []string{"exported_field", "exported_field_and_label", "private_field", "private_field_and_label"})
 	assert.Equal(t, promexporter.GetLabelValues(labels), []string{"1", "2", "3", "4"})
+	assert.Contains(t, promexporter.GetMetricText(), `logger_logs_total{component="(root)",level="fatal"} 0`)
 }

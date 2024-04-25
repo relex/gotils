@@ -91,7 +91,7 @@ func CreateTimerFromCron(cron string) Timer {
 // GetMetricText returns collected metrics. Usefull for tests.
 func GetMetricText() string {
 	writer := bytes.NewBuffer([]byte{})
-	enc := expfmt.NewEncoder(writer, expfmt.FmtText)
+	enc := expfmt.NewEncoder(writer, expfmt.NewFormat(expfmt.TypeTextPlain))
 	mfs, _ := prometheus.DefaultGatherer.Gather()
 	for _, mf := range mfs {
 		enc.Encode(mf)
@@ -112,10 +112,12 @@ func (c customGatherer) Gather() ([]*dto.MetricFamily, error) {
 // GetLabelNames creates a sorted list of label names out of struct fields to use in Prometheus metric
 // The label can be specified by a `label` tag, e.g.:
 // ```go
-// type ProcessLabels struct {
-// 	ProcessName   string `label:"process_name"`
-// 	ProcessStatus string `label:"process_status"`
-// }
+//
+//	type ProcessLabels struct {
+//		ProcessName   string `label:"process_name"`
+//		ProcessStatus string `label:"process_status"`
+//	}
+//
 // ```
 // If no `label` tag is specified, a field name converted to snake_case will be used instead
 func GetLabelNames(labelStruct interface{}) []string {
