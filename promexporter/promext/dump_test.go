@@ -27,15 +27,15 @@ import (
 )
 
 func TestMetricsDumpAndSum(t *testing.T) {
-	gv := prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "test_gauge"}, []string{"group", "class", "brand"})
+	gv := prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "test_gauge"}, []string{"group", "class", "brand", "extra"})
 
-	gv.WithLabelValues("Vehicle", "Car", "V").Add(20)
+	gv.WithLabelValues("Vehicle", "Car", "V", "").Add(20) // empty label to test filtering
 
-	g := gv.MustCurryWith(map[string]string{"group": "Vehicle", "brand": "V"})
+	g := gv.MustCurryWith(map[string]string{"group": "Vehicle", "brand": "V", "extra": ""})
 	g.WithLabelValues("Car").Sub(3)
 	g.WithLabelValues("Boat").Set(7)
 
-	gv.WithLabelValues("Test", "X", "T").Add(1)
+	gv.WithLabelValues("Test", "X", "T", "").Add(1)
 
 	assert.EqualValues(t, 25, SumMetricValues(gv))
 	assert.EqualValues(t, 24, SumMetricValues2(gv, prometheus.Labels{"group": "Vehicle"}))
@@ -47,9 +47,9 @@ func TestMetricsDumpAndSum(t *testing.T) {
 	reg := prometheus.NewPedanticRegistry()
 	assert.Nil(t, reg.Register(gv))
 	dumpResult := DumpMetrics("test_", true, false, reg)
-	assert.Equal(t, `test_gauge{brand="T",class="X",group="Test"} 1
-test_gauge{brand="V",class="Boat",group="Vehicle"} 7
-test_gauge{brand="V",class="Car",group="Vehicle"} 17
+	assert.Equal(t, `test_gauge{brand="T",class="X",extra="",group="Test"} 1
+test_gauge{brand="V",class="Boat",extra="",group="Vehicle"} 7
+test_gauge{brand="V",class="Car",extra="",group="Vehicle"} 17
 `, dumpResult)
 
 	t.Run("compare against metrics listener", func(t *testing.T) {

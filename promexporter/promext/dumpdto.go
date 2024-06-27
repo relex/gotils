@@ -41,6 +41,9 @@ func MatchExportedMetrics(metrics []*dto.Metric, labels prometheus.Labels) []*dt
 	for _, m := range metrics {
 		matchedLabels := 0
 		for _, lbl := range m.Label {
+			if *lbl.Value == "" {
+				continue
+			}
 			if labels[*lbl.Name] == *lbl.Value {
 				matchedLabels++
 			}
