@@ -14,7 +14,6 @@
 package io
 
 import (
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -24,7 +23,7 @@ import (
 // WriteFileAtomically writes file contents to specified path atomically
 func WriteFileAtomically(path string, contents []byte) {
 	tmpFile := path + "." + strconv.Itoa(os.Getpid())
-	if err := ioutil.WriteFile(tmpFile, contents, 0644); err != nil {
+	if err := os.WriteFile(tmpFile, contents, 0644); err != nil {
 		logger.Fatalf("failed to write file: %v", err)
 	}
 	if err := os.Rename(tmpFile, path); err != nil {

@@ -15,10 +15,10 @@ package cacher
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/relex/gotils/channels"
 )
@@ -64,7 +64,7 @@ func StartHTTPServer(testFilePath string) func() {
 }
 
 func readFile(path string) []byte {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		log.Panicf("cannot read file: %s", path)
 	}

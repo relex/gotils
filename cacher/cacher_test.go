@@ -34,7 +34,7 @@ func serveAndCache() (string, error) {
 	defer shutdownServer()
 
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
-	body, err := GetFromURLOrDefaultCache(req, cacheDir)
+	body, err := GetFromURLOrDefaultCache(logger.Root(), req, cacheDir)
 	return body, err
 }
 
@@ -53,7 +53,7 @@ func TestCacherGetFromCacheFile(t *testing.T) {
 	serveAndCache()
 
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
-	body, err := GetFromURLOrDefaultCache(req, cacheDir)
+	body, err := GetFromURLOrDefaultCache(logger.Root(), req, cacheDir)
 
 	assert.Nil(t, err)
 	assert.Contains(t, body, "foo.domain.com")
@@ -79,7 +79,7 @@ func TestCacherGetFromCacheForBadServer(t *testing.T) {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
 
 	numCalls := 0
-	err := GetFromURLOrDefaultCacheWithCallback(req, cacheDir, func(data []byte) error {
+	err := GetFromURLOrDefaultCacheWithCallback(logger.Root(), req, cacheDir, func(data []byte) error {
 		jsonErr := json.Unmarshal(data, &body)
 		switch numCalls {
 		case 0:
@@ -125,7 +125,7 @@ func TestCacherGetWithoutCacheFileAndConnection(t *testing.T) {
 	removeCache()
 
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s", Addr), nil)
-	_, err := GetFromURLOrDefaultCache(req, cacheDir)
+	_, err := GetFromURLOrDefaultCache(logger.Root(), req, cacheDir)
 	if assert.NotNil(t, err) {
 		assert.Contains(t, err.Error(), `failed to open URL: Get "http://localhost:12345": dial tcp`)
 		assert.Contains(t, err.Error(), `:12345: connect: connection refused`)
@@ -135,7 +135,7 @@ func TestCacherGetWithoutCacheFileAndConnection(t *testing.T) {
 func TestGetRequestErrors(t *testing.T) {
 	req, _ := http.NewRequest("GET", "https://domain-does-not-exist.com/ansible-hosts", nil)
 	req.Header.Add("PRIVATE-TOKEN", "test")
-	resp, err := GetFromURLOrDefaultCache(req, cacheDir)
+	resp, err := GetFromURLOrDefaultCache(logger.Root(), req, cacheDir)
 	assert.Equal(t, "", resp)
 	assert.NotNil(t, err)
 }

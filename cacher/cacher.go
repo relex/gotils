@@ -16,7 +16,7 @@ package cacher
 import (
 	"fmt"
 	"hash/fnv"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -34,13 +34,13 @@ func getFileNameFromURL(url string) string {
 
 // GetFromURLOrDefaultCache downloads file into cacheDir and returns its content
 //
-// If the URL is not available, attempt to read the previous response from cache
+// # If the URL is not available, attempt to read the previous response from cache
 //
 // The function only returns remote error if both downloading from the URL and reading from existing cache fail,
 // cache-related error is only logged, not reported.
-func GetFromURLOrDefaultCache(req *http.Request, cacheDir string) (string, error) {
+func GetFromURLOrDefaultCache(parentLogger logger.Logger, req *http.Request, cacheDir string) (string, error) {
 	var result string
-	err := GetFromURLOrDefaultCacheWithCallback(req, cacheDir, func(data []byte) error {
+	err := GetFromURLOrDefaultCacheWithCallback(parentLogger, req, cacheDir, func(data []byte) error {
 		result = string(data)
 		return nil
 	})
@@ -49,18 +49,17 @@ func GetFromURLOrDefaultCache(req *http.Request, cacheDir string) (string, error
 
 // GetFromURLOrDefaultCacheWithCallback downloads file into cacheDir and passes the content to the onData callback
 //
-// If the URL is not available, attempt to read the previous response from cache
+// # If the URL is not available, attempt to read the previous response from cache
 //
 // The onData function should process the data (e.g. parsing JSON) and return error on failure. It may be called a
 // second time to process cache if the data from remote URL cannot be processed.
 //
 // The function only returns remote error if both downloading from the URL and reading from existing cache fail,
 // cache-related error is only logged, not reported.
-func GetFromURLOrDefaultCacheWithCallback(req *http.Request, cacheDir string, onData func([]byte) error) error {
-
-	clogger := logger.WithFields(logger.Fields{
-		"component": "Cacher",
-		"url":       req.URL.String(),
+func GetFromURLOrDefaultCacheWithCallback(parentLogger logger.Logger, req *http.Request, cacheDir string, onData func([]byte) error) error {
+	clogger := parentLogger.WithFields(logger.Fields{
+		"library": "Cacher",
+		"url":     req.URL.String(),
 	})
 
 	filename := getFileNameFromURL(req.URL.String())
@@ -84,7 +83,7 @@ func GetFromURLOrDefaultCacheWithCallback(req *http.Request, cacheDir string, on
 	defer resp.Body.Close()
 
 	// Read from HTTP request
-	body, respErr := ioutil.ReadAll(resp.Body)
+	body, respErr := io.ReadAll(resp.Body)
 	if respErr != nil {
 		return getCache(clogger, filepath, onData, fmt.Errorf("failed to read request body from URL: %w", respErr))
 	}
@@ -99,7 +98,7 @@ func GetFromURLOrDefaultCacheWithCallback(req *http.Request, cacheDir string, on
 	}
 
 	// Create file to write data
-	if err := ioutil.WriteFile(filepath, body, 0644); err != nil {
+	if err := os.WriteFile(filepath, body, 0644); err != nil {
 		clogger.Error("failed to save cache: ", err)
 	}
 
@@ -108,7 +107,7 @@ func GetFromURLOrDefaultCacheWithCallback(req *http.Request, cacheDir string, on
 
 func getCache(clogger logger.Logger, filepath string, onData func([]byte) error, remoteErr error) error {
 	// Read from file if request fails
-	data, fileErr := ioutil.ReadFile(filepath)
+	data, fileErr := os.ReadFile(filepath)
 	if fileErr != nil {
 		clogger.Errorf("failed to read cache (remote URL is unavailable): %s", fileErr)
 		return remoteErr

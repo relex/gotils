@@ -17,7 +17,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -47,7 +46,7 @@ func before() {
 }
 
 func readLogFile() string {
-	body, err := ioutil.ReadFile(filename)
+	body, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Printf("unable to read file: %v", err)
 	}

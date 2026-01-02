@@ -15,7 +15,7 @@ package promext
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -64,7 +64,7 @@ test_gauge{brand="V",class="Car",extra="",group="Vehicle"} 17
 
 		rsp, httpErr := http.Get(fmt.Sprintf("http://%s/metrics", lsnr.Addr().String()))
 		assert.Nil(t, httpErr)
-		metrics, rspErr := ioutil.ReadAll(rsp.Body)
+		metrics, rspErr := io.ReadAll(rsp.Body)
 		assert.Nil(t, rspErr)
 		assert.Nil(t, rsp.Body.Close())
 

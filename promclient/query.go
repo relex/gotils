@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -80,7 +80,7 @@ func queryAPI(baseURL string, path string, parameters map[string]string, timeout
 	}
 
 	defer resp.Body.Close()
-	body, readErr := ioutil.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return fmt.Errorf("failed to read HTTP response: %w", readErr)
 	}

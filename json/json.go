@@ -16,7 +16,7 @@ package json
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 // MarshalJSONWithSorting marshals JSON with keys sorted by alphabet, same rule as marshalling map
@@ -46,12 +46,12 @@ func MarshalToJSONFile(filepath string, input interface{}) error {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath, data, 0644)
+	return os.WriteFile(filepath, data, 0644)
 }
 
 // UnmarshalFromJSONFile unmarshals JSON file at the specified path
 func UnmarshalFromJSONFile(filepath string, outputPtr interface{}) error {
-	data, err := ioutil.ReadFile(filepath)
+	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return err
 	}
