@@ -45,7 +45,10 @@ const metricListenerIndexPage = `<html>
 //
 // If the address contains unspecified port (":0"), a random port is assigned and set to server.Addr
 func LaunchMetricListener(address string, gatherer prometheus.Gatherer, enablePprof bool) *http.Server {
-	mlogger := logger.WithField("component", "MetricListener")
+	mlogger := logger.WithFields(logger.Fields{
+		"library":   "gotils/promexporter",
+		"component": "MetricListener",
+	})
 
 	lsnr, lsnrErr := net.Listen("tcp", address)
 	if lsnrErr != nil {

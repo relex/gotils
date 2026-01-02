@@ -58,7 +58,7 @@ func GetFromURLOrDefaultCache(parentLogger logger.Logger, req *http.Request, cac
 // cache-related error is only logged, not reported.
 func GetFromURLOrDefaultCacheWithCallback(parentLogger logger.Logger, req *http.Request, cacheDir string, onData func([]byte) error) error {
 	clogger := parentLogger.WithFields(logger.Fields{
-		"library": "Cacher",
+		"library": "gotils/cacher",
 		"url":     req.URL.String(),
 	})
 
